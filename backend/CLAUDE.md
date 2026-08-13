@@ -5,12 +5,14 @@ stack conventions, patterns, and gotchas that apply while writing code here.
 
 ## Current status
 
-Phase 1 Steps 0-2 done: open decisions frozen, `src/ankura` package skeleton
+Phase 1 Steps 0-3 done: open decisions frozen, `src/ankura` package skeleton
 created and verified (`import ankura` succeeds, `uv run pytest`/`ruff`/`mypy`
-all clean), and dependencies finalized — `psycopg[binary,pool]`, dev deps
+all clean), dependencies finalized — `psycopg[binary,pool]`, dev deps
 (`pytest-cov`, `pytest-env`, `types-python-dateutil`) added, `uv sync
---frozen` proven from a deleted-and-rebuilt `.venv`. Next up is Step 3
-(configuration and secrets) — see `../phase1.txt`.
+--frozen` proven from a deleted-and-rebuilt `.venv` — and `config.py` now
+enforces fail-fast settings (14 tests in `tests/test_config.py`), backed by
+a live Neon "ankura" project with connection pooling intentionally off.
+Next up is Step 4 (database connection) — see `../phase1.txt`.
 
 ## Source of truth for architecture
 
@@ -43,16 +45,18 @@ purpose — do not import them before their phase arrives.
 
 ## Layout
 
-Skeleton exists (Phase 1 Step 1, done 2026-08-13) — every non-`__init__.py`
-module below is currently a docstring-only stub naming the step that fills
-it in. Check a module's docstring before assuming it's unimplemented vs.
-just not-yet-reached.
+Skeleton created Phase 1 Step 1 (2026-08-13). Most non-`__init__.py`
+modules are still docstring-only stubs naming the step that fills them in —
+`config.py` is the first one actually implemented (Step 3). Check a
+module's docstring before assuming it's unimplemented vs. just
+not-yet-reached.
 
 ```
 backend/
   src/ankura/
     main.py            FastAPI app factory (routes wired in Step 8)
-    config.py           pydantic-settings, fail-fast — Step 3
+    config.py           IMPLEMENTED (Step 3) — fail-fast pydantic-settings,
+                         residency guard, assert_expected_db_role()
     clock.py             THE ONLY source of current time — Step 10
     db/
       engine.py           async engine/session, RLS session hook — Step 4
