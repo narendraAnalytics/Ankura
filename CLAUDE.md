@@ -74,12 +74,13 @@ not silently violate them while "just getting something working."
 
 ## Current status
 
-Phase 1 (Foundation) is in progress. Step 0 (open decisions frozen) and
-Step 1 (repo structure + `src/ankura` package skeleton — every module a
-stub naming the step that implements it) are done; see `phase1.txt` for the
-live checklist and what's next. No credit logic, feature engine, or LLM
-integration exists yet by design — Phase 1 is the multi-tenant API + schema
-+ audit spine only.
+Phase 1 (Foundation) is in progress. Steps 0-2 done: open decisions frozen,
+`src/ankura` package skeleton created (every module a stub naming the step
+that implements it), and dependencies finalized (`psycopg[binary,pool]`,
+dev-dep additions, `uv sync --frozen` proven from a clean `.venv`). See
+`phase1.txt` for the live checklist and what's next. No credit logic,
+feature engine, or LLM integration exists yet by design — Phase 1 is the
+multi-tenant API + schema + audit spine only.
 
 ## Working conventions for this repo
 

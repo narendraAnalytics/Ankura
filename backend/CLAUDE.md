@@ -5,9 +5,12 @@ stack conventions, patterns, and gotchas that apply while writing code here.
 
 ## Current status
 
-Phase 1 Steps 0-1 done: open decisions frozen, `src/ankura` package skeleton
+Phase 1 Steps 0-2 done: open decisions frozen, `src/ankura` package skeleton
 created and verified (`import ankura` succeeds, `uv run pytest`/`ruff`/`mypy`
-all clean). Next up is Step 2 (dependencies) — see `../phase1.txt`.
+all clean), and dependencies finalized — `psycopg[binary,pool]`, dev deps
+(`pytest-cov`, `pytest-env`, `types-python-dateutil`) added, `uv sync
+--frozen` proven from a deleted-and-rebuilt `.venv`. Next up is Step 3
+(configuration and secrets) — see `../phase1.txt`.
 
 ## Source of truth for architecture
 
