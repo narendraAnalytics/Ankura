@@ -49,6 +49,12 @@ packages = ["src/ankura"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 
+[tool.coverage.run]
+source = ["ankura"]
+
+[tool.coverage.report]
+fail_under = 80
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"

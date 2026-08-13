@@ -88,11 +88,46 @@ uv run ruff format --check .
 uv run mypy src/ankura
 ```
 
-`pre-commit` runs these plus `gitleaks` (secret scanning) automatically:
+`pre-commit` runs these plus `gitleaks` (secret scanning), `end-of-file-fixer`,
+`check-added-large-files`, and `no-commit-to-branch` (blocks direct commits to
+`main`) automatically. The config lives at the **repo root**
+(`../.pre-commit-config.yaml`), not here — this is a monorepo with one `.git`
+at the project root — but `pre-commit` itself is installed as a dev
+dependency of this package, so run it via:
 
 ```bash
-uv run pre-commit install
+uv run pre-commit install   # once per clone; registers the git hook
+uv run pre-commit run --all-files   # run everything on demand
 ```
+
+The ruff/mypy hooks shell out to `uv run --directory backend <tool>` rather
+than using the ruff-pre-commit / mirrors-mypy mirrors, so the versions
+pre-commit runs are always exactly what `uv.lock` pins — never a second,
+independently-drifting pin.
+
+## CI
+
+`../.github/workflows/ci.yml` runs on every push to `main` and every PR:
+
+- **lint-and-typecheck** — `ruff check`, `ruff format --check`, `mypy --strict`
+- **secret-scan** — `gitleaks`, full git history (not just the diff)
+- **test** — creates a real, disposable Neon branch (copy-on-write off
+  `production`), runs `alembic upgrade head` against it, then the full test
+  suite with `pytest --cov=ankura` (gate: fail under 80%, see
+  `[tool.coverage.report]` in `pyproject.toml`), then deletes the branch
+  whether the job passed or failed
+
+The `test` job needs two repository secrets that are **not** set by this
+commit (they're Neon-project-specific and must never be checked in):
+
+| Secret / variable | Value |
+| --- | --- |
+| `secrets.NEON_API_KEY` | A Neon API key with access to the `ankura` project |
+| `vars.NEON_PROJECT_ID` | The Neon project id (not secret, but repo-specific) |
+| `secrets.CI_API_KEY_PEPPER` | Any random string ≥16 chars — CI-only, does not need to match any real environment's pepper |
+
+`../.github/dependabot.yml` opens weekly PRs for both the `uv`-managed
+dependencies in `backend/` and the GitHub Actions used in `ci.yml` itself.
 
 ## Migrations
 

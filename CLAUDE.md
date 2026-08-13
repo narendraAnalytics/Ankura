@@ -74,7 +74,7 @@ not silently violate them while "just getting something working."
 
 ## Current status
 
-Phase 1 (Foundation) is in progress. Steps 0-11 done: open decisions frozen,
+Phase 1 (Foundation) is in progress. Steps 0-12 done: open decisions frozen,
 package skeleton, dependencies, fail-fast config, a live async DB engine
 against Neon (connecting as a dedicated non-owner role, `ankura_app`, never
 the schema owner), the canonical contracts (PAN/GSTIN/Udyam validators —
@@ -134,9 +134,26 @@ even though the request's own transaction rolls back moments later. See
 `backend/CLAUDE.md` for the concurrency (advisory-lock) story and the two
 flagged assumptions about which auth/rejection paths can actually emit an
 event at all (both need a resolvable tenant_id, which not every failure
-path has). See `phase1.txt` for the live checklist and what's next. No
-credit logic, feature engine, or LLM integration exists yet by design —
-Phase 1 is the multi-tenant API + schema + audit spine only.
+path has). Step 12 added CI, quality gates, and secret scanning — and
+changed HOW work lands in this repo going forward. Steps 0-11 were all
+committed directly to `main`; Step 12 adds pre-commit's
+`no-commit-to-branch` hook and asks for GitHub branch protection on
+`main`, both of which exist specifically to stop that. Rather than
+silently pick a side, this was asked outright — decided: switch to a
+PR-based workflow starting with Step 12's own changes, which shipped via a
+branch + PR instead of a direct push. `.pre-commit-config.yaml` lives at
+the repo root (one `.git`, monorepo); `.github/workflows/ci.yml` runs
+lint/typecheck, a full-history `gitleaks` scan, and a test job that spins
+up a real disposable Neon branch per run (deleted unconditionally
+afterward) to run `alembic upgrade head` and the full suite with a
+coverage gate. GitHub branch protection itself is NOT configured — no
+`gh` CLI or MCP tool for repository branch-protection settings was
+available in this session, so that half is a manual step left for the
+repo owner. See `backend/CLAUDE.md` for the ruff-hook path-resolution
+gotcha found live while wiring this up. See `phase1.txt` for the live
+checklist and what's next. No credit logic, feature engine, or LLM
+integration exists yet by design — Phase 1 is the multi-tenant API +
+schema + audit spine only.
 
 ## Working conventions for this repo
 

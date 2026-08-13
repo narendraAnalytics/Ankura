@@ -1,0 +1,115 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v10.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+
+      - name: Install dependencies
+        run: uv sync --directory backend --frozen
+
+      - name: ruff check
+        run: uv run --directory backend ruff check .
+
+      - name: ruff format --check
+        run: uv run --directory backend ruff format --check .
+
+      - name: mypy --strict
+        run: uv run --directory backend mypy src/ankura
+
+  secret-scan:
+    name: Secret scan (gitleaks, full history)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # gitleaks needs full history, not a shallow clone
+
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test:
+    name: Test (ephemeral Neon branch, coverage gate)
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    env:
+      NEON_PROJECT_ID: ${{ vars.NEON_PROJECT_ID }}
+      NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+      NEON_BRANCH_NAME: ci-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v10.0.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: "backend/uv.lock"
+
+      - name: Install dependencies
+        run: uv sync --directory backend --frozen
+
+      # phase1.txt Step 12: "alembic upgrade head against an ephemeral Neon
+      # branch" — a real, disposable copy-on-write branch off "production",
+      # deleted at the end of the job regardless of outcome. Two roles are
+      # resolved on the SAME branch (never two separate branches): ankura_app
+      # (pooled, DATABASE_URL — the app's own connection) and neondb_owner
+      # (unpooled, DATABASE_DIRECT_URL — Alembic's, per final architecture.txt
+      # §14.3's "two connection strings" rule).
+      - name: Create ephemeral Neon branch
+        run: |
+          npx --yes neonctl@latest branches create \
+            --project-id "$NEON_PROJECT_ID" \
+            --name "$NEON_BRANCH_NAME" \
+            --parent production \
+            --api-key "$NEON_API_KEY"
+
+      - name: Resolve per-role connection strings
+        run: |
+          APP_URL=$(npx --yes neonctl@latest connection-string "$NEON_BRANCH_NAME" \
+            --role-name ankura_app --pooled \
+            --project-id "$NEON_PROJECT_ID" --api-key "$NEON_API_KEY")
+          OWNER_URL=$(npx --yes neonctl@latest connection-string "$NEON_BRANCH_NAME" \
+            --role-name neondb_owner \
+            --project-id "$NEON_PROJECT_ID" --api-key "$NEON_API_KEY")
+          echo "::add-mask::$APP_URL"
+          echo "::add-mask::$OWNER_URL"
+          echo "DATABASE_URL=$APP_URL" >> "$GITHUB_ENV"
+          echo "DATABASE_DIRECT_URL=$OWNER_URL" >> "$GITHUB_ENV"
+
+      - name: Apply migrations (alembic upgrade head)
+        env:
+          ENV: local
+          APP_DB_ROLE: ankura_app
+          LOG_LEVEL: INFO
+          API_KEY_PEPPER: ${{ secrets.CI_API_KEY_PEPPER }}
+        run: uv run --directory backend alembic upgrade head
+
+      - name: pytest --cov (fail under 80%)
+        env:
+          ENV: local
+          APP_DB_ROLE: ankura_app
+          LOG_LEVEL: INFO
+          API_KEY_PEPPER: ${{ secrets.CI_API_KEY_PEPPER }}
+        run: uv run --directory backend pytest --cov=ankura --cov-report=term-missing
+
+      - name: Delete ephemeral Neon branch
+        if: always()
+        run: |
+          npx --yes neonctl@latest branches delete "$NEON_BRANCH_NAME" \
+            --project-id "$NEON_PROJECT_ID" --api-key "$NEON_API_KEY" || true
