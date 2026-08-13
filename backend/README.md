@@ -64,6 +64,12 @@ uv run fastapi dev src/ankura/main.py     # start the dev server
 
 API docs at `http://localhost:8000/docs` once running.
 
+**Windows Git Bash / legacy console:** if this crashes with
+`UnicodeEncodeError: 'charmap' codec can't encode characters` before the
+server ever binds, it's `fastapi dev`'s own CLI banner trying to print an
+emoji on a non-UTF-8 console — nothing to do with this app. Fix:
+`PYTHONIOENCODING=utf-8 PYTHONUTF8=1 uv run fastapi dev src/ankura/main.py`.
+
 ## Testing
 
 ```bash
