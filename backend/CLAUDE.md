@@ -5,27 +5,28 @@ stack conventions, patterns, and gotchas that apply while writing code here.
 
 ## Current status
 
-Phase 1 Steps 0-4 done: open decisions frozen, `src/ankura` package skeleton
-created and verified (`import ankura` succeeds, `uv run pytest`/`ruff`/`mypy`
-all clean), dependencies finalized — `psycopg[binary,pool]`, dev deps
-(`pytest-cov`, `pytest-env`, `types-python-dateutil`) added, `uv sync
---frozen` proven from a deleted-and-rebuilt `.venv` — `config.py` enforces
-fail-fast settings (14 tests), and `db/engine.py` has a live async engine
-against Neon's "ankura" project: connects as `ankura_app` (dedicated
-non-owner role, `NOSUPERUSER`/`NOBYPASSRLS`/etc., created via Neon MCP and
-verified against `pg_roles`), `get_db_session()` gives one transaction per
-request, and `set_tenant_context()` is the RLS hook Step 6 will call — 9
-engine tests pass live against Neon, including one proving tenant context
-never leaks between sessions. Connection pooling is intentionally off
-(owner decision); `prepare_threshold=None` stays set defensively regardless.
-`contracts/` (Step 5) now has PAN/GSTIN/Udyam validators — GSTIN's Mod-36
-checksum was hand-computed against a real GSTIN and verified correct
-*before* any code was written, then pinned as a regression test — plus
-`MoneyPaise` (INR-only), `AsOf`/`UtcDatetime`, `EntityType`, `LoanPurpose`,
-`ApplicationIn`/`ApplicationOut`/`ApplicationStatus`, and the
-`CanonicalFinancialData` shapes Phase 2 will read. 57 new tests this step;
-full non-network suite 75/75. Next up is Step 6 (multi-tenant schema + RLS)
-— see `../phase1.txt`.
+Phase 1 Steps 0-6 done. Foundation (0-3): decisions frozen, `src/ankura`
+package skeleton, dependencies finalized, `config.py` fail-fast settings.
+Database (4-6): `db/engine.py` has a live async engine against Neon's
+"ankura" project connecting as `ankura_app` (dedicated non-owner role,
+verified via `pg_roles`, never the schema owner); `contracts/` has PAN/
+GSTIN (Mod-36 checksum hand-verified against a real GSTIN before any code
+was written)/Udyam validators, `MoneyPaise` (INR-only), `AsOf`/
+`UtcDatetime`, and the `ApplicationIn`/`Out`/`CanonicalFinancialData`
+shapes; and the full schema (`db/models/`: tenants, api_keys, borrowers,
+applications, audit_events, idempotency_keys) is live in Neon with Row
+Level Security on the 4 genuinely tenant-scoped tables — deliberately NOT
+on tenants/api_keys, which are bootstrap/auth tables (see db/base.py for
+why). A real RLS bug was found and fixed live this step: the policy needed
+`NULLIF(current_setting('app.tenant_id', true), '')::uuid`, not bare
+`current_setting(...)`, or a reused pooled connection with no context set
+raises instead of cleanly returning zero rows — see final architecture.txt
+§14.4. Verified isolation at three levels (ORM, no-context session, and
+raw SQL with zero ORM connected genuinely as ankura_app). Full suite
+89/89 passing live against Neon, ruff clean, mypy clean. Next up is Step 7
+(Alembic migrations) — see `../phase1.txt` (Step 7 must `alembic stamp
+head` on the existing "production" branch, not `upgrade head`, since this
+schema already exists there).
 
 ## Source of truth for architecture
 
@@ -60,10 +61,10 @@ purpose — do not import them before their phase arrives.
 
 Skeleton created Phase 1 Step 1 (2026-08-13). Most non-`__init__.py`
 modules are still docstring-only stubs naming the step that fills them in —
-`config.py` (Step 3), `db/engine.py` (Step 4), `contracts/`, and
-`validators/identifiers.py` (both Step 5) are implemented. Check a
-module's docstring before assuming it's unimplemented vs. just
-not-yet-reached.
+`config.py` (Step 3), `db/engine.py` (Step 4), `contracts/` and
+`validators/identifiers.py` (Step 5), and `db/base.py` + all of
+`db/models/` (Step 6) are implemented. Check a module's docstring before
+assuming it's unimplemented vs. just not-yet-reached.
 
 ```
 backend/
@@ -75,9 +76,11 @@ backend/
     db/
       engine.py           IMPLEMENTED (Step 4) — async engine (ankura_app,
                            not owner), get_db_session(), set_tenant_context()
-      base.py               DeclarativeBase, shared mixins — Step 6
-      models/               tenant, borrower, application, audit,
-                             idempotency, api_key — Step 6
+      base.py               IMPLEMENTED (Step 6) — DeclarativeBase,
+                           TimestampMixin, RLS scope decision documented here
+      models/               IMPLEMENTED (Step 6) — tenant, api_key (both
+                           deliberately NOT RLS-scoped, see base.py),
+                           borrower, application, audit, idempotency (RLS)
     contracts/            IMPLEMENTED (Step 5) — common, application,
                            financial (write these BEFORE tables —
                            final architecture.txt §14.1)
@@ -88,9 +91,11 @@ backend/
     services/              applications, idempotency (Step 9), audit (Step 11)
     validators/             IMPLEMENTED (Step 5) — identifiers.py, PAN/GSTIN
                            checksum/Udyam
-  alembic/                 not created yet — `alembic init` runs in Step 7
+  alembic/                 not created yet — Step 7 wraps the schema (already
+                          live in Neon since Step 6) into real migrations
   tests/                  one file per step's test target (see phase1.txt);
-                          currently docstring stubs, 0 tests collected
+                          test_tenant_isolation.py (Step 6) now has 5 real
+                          tests against live Neon, not a stub
   .env.example             keys named, values blank — populated in Step 3
 ```
 

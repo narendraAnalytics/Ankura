@@ -74,19 +74,22 @@ not silently violate them while "just getting something working."
 
 ## Current status
 
-Phase 1 (Foundation) is in progress. Steps 0-5 done: open decisions frozen,
-`src/ankura` package skeleton created (every module a stub naming the step
-that implements it), dependencies finalized (`psycopg[binary,pool]`,
-dev-dep additions, `uv sync --frozen` proven from a clean `.venv`),
-`config.py` enforces fail-fast settings, `db/engine.py` has a live async
-engine against Neon connecting as a dedicated non-owner role (`ankura_app`,
-verified via `pg_roles`) with a working RLS tenant-context hook
-(`set_tenant_context`, verified live to be transaction-scoped and non-
-leaking), and the canonical contracts (`contracts/`) are written — PAN,
-GSTIN (Mod-36 checksum hand-verified against a real GSTIN before any code
-was written), Udyam, `MoneyPaise` (INR-only, integer paise), `AsOf`/
-`UtcDatetime`, `ApplicationIn`/`Out`, and the financial-data shapes Phase 2
-will read. See `phase1.txt` for the live checklist and
+Phase 1 (Foundation) is in progress. Steps 0-6 done: open decisions frozen,
+package skeleton, dependencies, fail-fast config, a live async DB engine
+against Neon (connecting as a dedicated non-owner role, `ankura_app`, never
+the schema owner), the canonical contracts (PAN/GSTIN/Udyam validators —
+GSTIN's Mod-36 checksum hand-verified against a real GSTIN before any code
+was written — `MoneyPaise` INR-only, `AsOf`/`UtcDatetime`, application and
+financial-data shapes), and now the full multi-tenant schema is live in
+Neon with Row Level Security enforced on every genuinely tenant-scoped
+table. One deliberate exception: `tenants`/`api_keys` are NOT RLS-scoped —
+they're bootstrap/auth tables that establish tenant identity, so RLS-gating
+them on a tenant_id you don't have yet would be circular; this is the
+standard pattern, not a gap. A live RLS bug was found and fixed this step
+(policy needed `NULLIF(current_setting(...), '')::uuid`, not a bare
+`current_setting` call, or a reused connection with no tenant context set
+raised an error instead of cleanly returning no rows) — see
+`final architecture.txt` §14.4. See `phase1.txt` for the live checklist and
 what's next. No credit logic, feature engine, or LLM integration exists yet
 by design — Phase 1 is the
 multi-tenant API + schema + audit spine only.
