@@ -178,14 +178,33 @@ role deliberately lacks (use an advisory lock), Postgres's `now()` is
 transaction-constant so chain ordering must walk by hash pointer not
 timestamp, and dev Neon is confirmed live in `aws-us-east-2` (not a
 residency violation — the guard only applies to `ENV=prod`). Phase 1 is
-closed. Next: Phase 2 (200-borrower synthetic cohort + deterministic
-feature engine, per `final architecture.txt` §14.2's pinned formulas).
+closed, tagged `p1-foundation`.
+
+**Phase 2 (synthetic cohort + deterministic feature engine) is starting.**
+Plan is `../phase2.txt` (same checkbox/PROVE-IT format as `phase1.txt`,
+gitignored/local-only). Nothing in `src/ankura` exists for it yet — no
+`features/`, `cohort/`, or `providers/` package. Step 0 there freezes nine
+open decisions (cohort size/mix, ratio rounding convention, the D6
+indicative-EMI-rate stand-in, etc.) before any code gets written, same
+discipline as Phase 1 Step 0. Load-bearing constraint carried forward from
+Phase 1: the feature engine computes numbers, it never decides anything
+with them — a threshold comparison or routing decision anywhere in
+`features/` means Phase 3 scope has leaked backward. `final architecture.txt`
+§14.2 is where every metric formula must be pinned exactly once, and §16
+is where Phase 1's five hard-won concurrency/transaction patterns
+(self-contained audit-style writes, claim-before-work idempotency,
+advisory locks over `SELECT ... FOR UPDATE`, hash-pointer chain ordering)
+are recorded for reuse — `feature_snapshots` (Phase 2 Step 9) is planned
+as an immutable, no-UPDATE-grant table exactly like `audit_events`, so
+those same patterns apply directly, not just by analogy.
 
 ## Source of truth for architecture
 
 `../final architecture.txt` is the locked technical decision record, including
-the §14 addendum (connection strings, RLS rules, canonical metric formulas).
-`../phase1.txt` is the current phase's checklist. Follow both exactly; do not
+the §14 addendum (connection strings, RLS rules, canonical metric formulas)
+and the §16 addendum (Phase 1 close-out patterns for Phase 2/3 to reuse).
+`../phase2.txt` is the current phase's checklist (`../phase1.txt` is the
+completed Phase 1 checklist, kept for reference). Follow both exactly; do not
 improvise structure that contradicts them without flagging it to the user
 first — architecture changes get written back into `final architecture.txt`,
 not left implicit in a diff.
