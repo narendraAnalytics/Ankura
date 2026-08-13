@@ -24,6 +24,7 @@ from ankura.clock import Clock
 from ankura.contracts.application import ApplicationIn, ApplicationOut, ApplicationStatus
 from ankura.contracts.common import EntityType, LoanPurpose
 from ankura.db.models import Application, Borrower
+from ankura.services import idempotency as idempotency_service
 
 logger = logging.getLogger(__name__)
 
@@ -174,6 +175,41 @@ async def create_application(
         entity_type=payload.entity_type.value,
         legal_name=payload.legal_name,
     )
+
+
+async def create_application_idempotent(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    idempotency_key: str,
+    payload: ApplicationIn,
+    clock: Clock,
+    ttl_hours: int,
+) -> tuple[int, dict[str, object]]:
+    """Idempotency-Key-wrapped `create_application` — phase1.txt Step 9.
+    Returns (status_code, response_body) so the route can serve a
+    byte-identical replay on every subsequent call with the same key and
+    the same request body.
+    """
+
+    async def _do_work() -> tuple[int, dict[str, object]]:
+        result = await create_application(session, tenant_id, payload, clock)
+        return 201, result.model_dump(mode="json")
+
+    try:
+        return await idempotency_service.run_idempotent(
+            session,
+            tenant_id,
+            idempotency_key,
+            payload.model_dump(mode="json"),
+            clock,
+            _do_work,
+            ttl_hours=ttl_hours,
+        )
+    except idempotency_service.IdempotencyKeyReuseError as exc:
+        raise ConflictError(
+            "IDEMPOTENCY_KEY_REUSE",
+            f"Idempotency-Key {idempotency_key!r} was already used with a different request body",
+        ) from exc
 
 
 async def get_application(

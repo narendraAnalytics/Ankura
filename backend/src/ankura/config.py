@@ -56,6 +56,11 @@ class Settings(BaseSettings):
     api_key_pepper: str
     """Server-side secret mixed into tenant API key hashes before storage."""
 
+    idempotency_key_ttl_hours: int = 24
+    """How long a stored Idempotency-Key response stays replayable — see
+    phase1.txt Step 9. Has a sane default; only set IDEMPOTENCY_KEY_TTL_HOURS
+    in the environment to override it."""
+
     @field_validator("database_url", "database_direct_url")
     @classmethod
     def _must_look_like_postgres_dsn(cls, value: str) -> str:

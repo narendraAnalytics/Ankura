@@ -74,7 +74,7 @@ not silently violate them while "just getting something working."
 
 ## Current status
 
-Phase 1 (Foundation) is in progress. Steps 0-8 done: open decisions frozen,
+Phase 1 (Foundation) is in progress. Steps 0-9 done: open decisions frozen,
 package skeleton, dependencies, fail-fast config, a live async DB engine
 against Neon (connecting as a dedicated non-owner role, `ankura_app`, never
 the schema owner), the canonical contracts (PAN/GSTIN/Udyam validators —
@@ -104,10 +104,19 @@ request_id}}` envelope for every rejection, and `POST`/`GET
 INSERT, which would race). Building it required pulling two things forward
 out of their own later steps: a minimal `Clock` protocol + `SystemClock`
 (Step 10 still owns `FrozenClock` and the banned-`datetime.now()` grep
-test), and a new `security.py` module for the key hashing. See
-`phase1.txt` for the live checklist and what's next. No credit logic,
-feature engine, or LLM integration exists yet by design — Phase 1 is the
-multi-tenant API + schema + audit spine only.
+test), and a new `security.py` module for the key hashing. Step 9 made
+POST /v1/applications idempotent: `Idempotency-Key` is required (missing →
+400), and the request is served by claiming `(tenant_id, key)` with a
+placeholder row *before* the underlying work runs, then finalizing it with
+the real response afterward, all inside one SAVEPOINT nested in the
+request's own transaction — claiming before the work, not after, is what
+makes two truly concurrent identical requests block on the idempotency
+table's own unique index instead of racing each other straight into
+`applications`' own unique constraints. See `backend/CLAUDE.md` for the
+concurrency-bug story and the JSONB key-ordering fix that byte-identical
+replay needed. See `phase1.txt` for the live checklist and what's next. No
+credit logic, feature engine, or LLM integration exists yet by design —
+Phase 1 is the multi-tenant API + schema + audit spine only.
 
 ## Working conventions for this repo
 

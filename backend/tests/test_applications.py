@@ -19,8 +19,11 @@ VALID_GSTIN = "27AAPFU0939F1ZV"
 VALID_PAN = "AAPFU0939F"
 
 
-def _headers(raw_key: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {raw_key}"}
+def _headers(raw_key: str, *, idempotency_key: str | None = None) -> dict[str, str]:
+    return {
+        "Authorization": f"Bearer {raw_key}",
+        "Idempotency-Key": idempotency_key or str(uuid.uuid4()),
+    }
 
 
 def _payload(**overrides: Any) -> dict[str, Any]:

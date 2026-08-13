@@ -41,9 +41,35 @@ validation, even a bare unhandled exception — goes through one
 `{error: {code, message, details, request_id}}` envelope. `clock.py`
 (`Clock` protocol + `SystemClock`) and `security.py` (API key hashing)
 were pulled forward from Steps 10 and "nowhere in particular" respectively
-— see `../phase1.txt` Step 8's sequencing note for why. Full suite 116/116
-passing live against Neon, ruff clean, mypy clean. Next up is Step 9
-(idempotency).
+— see `../phase1.txt` Step 8's sequencing note for why. Step 9 (idempotency)
+is also done: `services/idempotency.py` requires `Idempotency-Key` on every
+POST /v1/applications (missing → 400 `IDEMPOTENCY_KEY_MISSING`), and claims
+`(tenant_id, key)` with a placeholder row *before* running the wrapped work
+— not after — inside one SAVEPOINT (`session.begin_nested()`) nested in the
+request's own transaction. Claiming first is the load-bearing decision: an
+earlier version claimed after the work ran and broke under real concurrency,
+because `services/applications.py`'s own inserts (e.g.
+`uq_applications_tenant_external_ref`) have no idempotency awareness of
+their own — two truly concurrent identical requests both reached that
+INSERT and one threw a raw `IntegrityError`/500 instead of replaying.
+Claiming first means the loser blocks on the idempotency table's own unique
+index before ever touching `applications`/`borrowers`; Postgres holds that
+lock for the winner's *entire* transaction (claim + work + finalize), so
+`INSERT ... ON CONFLICT DO NOTHING RETURNING id` gives "the loser waits and
+replays the winner's response" for free, no `IntegrityError` handling
+anywhere. Byte-identical replay needed one more fix: JSONB does not
+preserve key insertion order on round-trip (Postgres re-serializes by its
+own canonical order), so every return path sorts keys before handing the
+body back (`_normalize()`) — otherwise a fresh response and the same
+response read back from storage differ byte-for-byte despite identical
+content. Keys expire via `Settings.idempotency_key_ttl_hours` (default 24,
+env `IDEMPOTENCY_KEY_TTL_HOURS`) but an expired-and-unpurged row still
+occupies its `(tenant_id, key)` slot and is still replayed if found — only
+`purge_expired()` (deliberately not wired to a scheduler; Cloud Tasks is
+out of scope for Phase 1) actually frees a key for reuse. Full suite
+121/121 passing live against Neon (including the 8-way concurrent-request
+race, re-run standalone 9x with no failures), ruff clean, mypy clean. Next
+up is Step 10 (as-of time discipline / `FrozenClock`).
 
 ## Source of truth for architecture
 
