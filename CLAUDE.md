@@ -74,24 +74,29 @@ not silently violate them while "just getting something working."
 
 ## Current status
 
-Phase 1 (Foundation) is in progress. Steps 0-6 done: open decisions frozen,
+Phase 1 (Foundation) is in progress. Steps 0-7 done: open decisions frozen,
 package skeleton, dependencies, fail-fast config, a live async DB engine
 against Neon (connecting as a dedicated non-owner role, `ankura_app`, never
 the schema owner), the canonical contracts (PAN/GSTIN/Udyam validators —
 GSTIN's Mod-36 checksum hand-verified against a real GSTIN before any code
 was written — `MoneyPaise` INR-only, `AsOf`/`UtcDatetime`, application and
-financial-data shapes), and now the full multi-tenant schema is live in
-Neon with Row Level Security enforced on every genuinely tenant-scoped
-table. One deliberate exception: `tenants`/`api_keys` are NOT RLS-scoped —
-they're bootstrap/auth tables that establish tenant identity, so RLS-gating
-them on a tenant_id you don't have yet would be circular; this is the
-standard pattern, not a gap. A live RLS bug was found and fixed this step
-(policy needed `NULLIF(current_setting(...), '')::uuid`, not a bare
-`current_setting` call, or a reused connection with no tenant context set
-raised an error instead of cleanly returning no rows) — see
-`final architecture.txt` §14.4. See `phase1.txt` for the live checklist and
-what's next. No credit logic, feature engine, or LLM integration exists yet
-by design — Phase 1 is the
+financial-data shapes), the full multi-tenant schema live in Neon with Row
+Level Security enforced on every genuinely tenant-scoped table, and that
+same schema now also expressed as real Alembic migrations (0001 tables,
+0002 RLS/policies/grants — RLS is hand-written raw SQL, Alembic can't
+autogenerate it). One deliberate exception: `tenants`/`api_keys` are NOT
+RLS-scoped — they're bootstrap/auth tables that establish tenant identity,
+so RLS-gating them on a tenant_id you don't have yet would be circular;
+this is the standard pattern, not a gap. A live RLS bug was found and
+fixed in Step 6 (policy needed `NULLIF(current_setting(...), '')::uuid`,
+not a bare `current_setting` call, or a reused connection with no tenant
+context set raised an error instead of cleanly returning no rows) — see
+`final architecture.txt` §14.4. Step 7 proved the migrations on a
+disposable Neon branch (full upgrade/downgrade/upgrade + empty-diff cycle)
+before `alembic stamp head`-ing the real `production` branch, since that
+branch's schema already existed from Step 6's direct `create_all()`. See
+`phase1.txt` for the live checklist and what's next. No credit logic,
+feature engine, or LLM integration exists yet by design — Phase 1 is the
 multi-tenant API + schema + audit spine only.
 
 ## Working conventions for this repo

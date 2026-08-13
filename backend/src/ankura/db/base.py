@@ -28,12 +28,33 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, func
+from sqlalchemy import DateTime, MetaData, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+# Deterministic constraint naming (Step 7) — applies to constraints that
+# don't already carry an explicit `name=` (every FK and PK below; every
+# check/unique/index constraint in db/models/ already names itself
+# explicitly). Without this, Alembic autogenerate produces a different,
+# unstable FK name every time it regenerates a diff, since SQLAlchemy
+# otherwise lets Postgres pick one.
+#
+# Deliberately NO "ck" entry: unlike fk/pk, SQLAlchemy always re-applies the
+# naming convention to CheckConstraint even when an explicit `name=` is
+# already given (the explicit name becomes the %(constraint_name)s token),
+# which would double-prefix the already-final names already live in Neon
+# (e.g. "ck_tenants_status" -> "ck_tenants_ck_tenants_status"). Omitting
+# "ck" leaves every model's explicit CheckConstraint name untouched, which
+# is exactly what's already live in Neon from Step 6's create_all().
+NAMING_CONVENTION = {
+    "ix": "ix_%(column_0_label)s",
+    "uq": "uq_%(table_name)s_%(column_0_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
+    "pk": "pk_%(table_name)s",
+}
 
 
 class Base(DeclarativeBase):
-    pass
+    metadata = MetaData(naming_convention=NAMING_CONVENTION)
 
 
 class TimestampMixin:
