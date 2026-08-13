@@ -74,7 +74,7 @@ not silently violate them while "just getting something working."
 
 ## Current status
 
-Phase 1 (Foundation) is in progress. Steps 0-7 done: open decisions frozen,
+Phase 1 (Foundation) is in progress. Steps 0-8 done: open decisions frozen,
 package skeleton, dependencies, fail-fast config, a live async DB engine
 against Neon (connecting as a dedicated non-owner role, `ankura_app`, never
 the schema owner), the canonical contracts (PAN/GSTIN/Udyam validators —
@@ -94,7 +94,17 @@ context set raised an error instead of cleanly returning no rows) — see
 `final architecture.txt` §14.4. Step 7 proved the migrations on a
 disposable Neon branch (full upgrade/downgrade/upgrade + empty-diff cycle)
 before `alembic stamp head`-ing the real `production` branch, since that
-branch's schema already existed from Step 6's direct `create_all()`. See
+branch's schema already existed from Step 6's direct `create_all()`. Step 8
+built the application intake API on top of all this: tenant API key auth
+(HMAC-SHA256 + pepper, not a slow password KDF — API keys are high-entropy
+secrets, not human passwords), a single `{error:{code,message,details,
+request_id}}` envelope for every rejection, and `POST`/`GET
+/v1/applications` with keyset (cursor) pagination and an atomic
+`INSERT ... ON CONFLICT DO UPDATE` borrower upsert (never SELECT-then-
+INSERT, which would race). Building it required pulling two things forward
+out of their own later steps: a minimal `Clock` protocol + `SystemClock`
+(Step 10 still owns `FrozenClock` and the banned-`datetime.now()` grep
+test), and a new `security.py` module for the key hashing. See
 `phase1.txt` for the live checklist and what's next. No credit logic,
 feature engine, or LLM integration exists yet by design — Phase 1 is the
 multi-tenant API + schema + audit spine only.
