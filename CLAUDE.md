@@ -67,18 +67,26 @@ not silently violate them while "just getting something working."
 7. **No secrets in code, env files in git, or documents in this repo.** If a
    provider credential ever appears in a committed file, treat it as
    compromised and rotate it — see `final architecture.txt` §14.5.
+8. **Cloud Run hosts the API; Vertex AI / Gemini Enterprise Agent Platform
+   (Agent Runtime) hosts the LangGraph graph**, from Phase 4 onward — locked
+   2026-08-13, see `final architecture.txt` §15. Do not re-litigate this or
+   embed the graph in-process on Cloud Run instead.
 
 ## Current status
 
-Phase 1 (Foundation) is in progress. See `phase1.txt` for the live checklist.
-No credit logic, feature engine, or LLM integration exists yet by design —
-Phase 1 is the multi-tenant API + schema + audit spine only.
+Phase 1 (Foundation) is in progress. Step 0 (open decisions frozen) and
+Step 1 (repo structure + `src/ankura` package skeleton — every module a
+stub naming the step that implements it) are done; see `phase1.txt` for the
+live checklist and what's next. No credit logic, feature engine, or LLM
+integration exists yet by design — Phase 1 is the multi-tenant API + schema
++ audit spine only.
 
 ## Working conventions for this repo
 
-- This is a two-part repo: planning docs at the root (`*.txt`), code inside
-  `backend/` (its own git history). A `frontend/` (Next.js) will appear in a
-  later phase — do not create it early.
+- This is a monorepo: planning docs and a single `.git` at the project root,
+  code inside `backend/` as an ordinary subfolder (not a nested repo). A
+  `frontend/` (Next.js) will appear alongside it in a later phase — do not
+  create it early.
 - Planning docs are plain `.txt`, not Markdown, by the user's existing
   convention. Keep new planning docs in that format unless asked otherwise.
 - Checkbox files (`phase1.txt` and future `phaseN.txt`) are living documents:

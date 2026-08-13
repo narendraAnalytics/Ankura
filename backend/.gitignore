@@ -9,3 +9,17 @@ wheels/
 # Virtual environments
 .venv
 .env
+*.env.local
+
+# Test / type-check / lint caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local databases
+*.db
+
+# OS / editor cruft
+.DS_Store

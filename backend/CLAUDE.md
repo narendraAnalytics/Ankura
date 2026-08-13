@@ -3,6 +3,12 @@
 Read `../CLAUDE.md` first for product context. This file is backend-specific:
 stack conventions, patterns, and gotchas that apply while writing code here.
 
+## Current status
+
+Phase 1 Steps 0-1 done: open decisions frozen, `src/ankura` package skeleton
+created and verified (`import ankura` succeeds, `uv run pytest`/`ruff`/`mypy`
+all clean). Next up is Step 2 (dependencies) — see `../phase1.txt`.
+
 ## Source of truth for architecture
 
 `../final architecture.txt` is the locked technical decision record, including
@@ -18,8 +24,12 @@ not left implicit in a diff.
 - FastAPI + Pydantic v2, SQLAlchemy 2 (async), Alembic, psycopg3
 - Postgres: **Neon** in dev, **Cloud SQL (asia-south1)** in prod — app code
   stays portable, no provider-specific SQL features
-- LangGraph for orchestration (from Phase 4 onward — not used yet)
-- Gemini via Vertex AI for the two bounded LLM surfaces only (from Phase 5)
+- LangGraph for orchestration (from Phase 4 onward — not used yet), hosted on
+  **Vertex AI / Gemini Enterprise Agent Platform (Agent Runtime)** — not
+  embedded in-process on Cloud Run. Cloud Run hosts the FastAPI service
+  itself. Locked 2026-08-13, see `../final architecture.txt` §15.
+- Gemini via Vertex AI for the two bounded LLM surfaces only (from Phase 5),
+  called from inside the Agent Runtime-hosted graph
 - Firebase Auth for the human-facing consoles only (from Phase 4) — Phase 1's
   API uses tenant API keys, not Firebase
 - Testing: pytest + pytest-asyncio + pytest-cov; ruff + mypy for quality gates
@@ -30,21 +40,34 @@ purpose — do not import them before their phase arrives.
 
 ## Layout
 
+Skeleton exists (Phase 1 Step 1, done 2026-08-13) — every non-`__init__.py`
+module below is currently a docstring-only stub naming the step that fills
+it in. Check a module's docstring before assuming it's unimplemented vs.
+just not-yet-reached.
+
 ```
 backend/
   src/ankura/
-    main.py            FastAPI app factory
-    config.py           pydantic-settings, fail-fast on missing config
-    clock.py             THE ONLY source of current time — see below
+    main.py            FastAPI app factory (routes wired in Step 8)
+    config.py           pydantic-settings, fail-fast — Step 3
+    clock.py             THE ONLY source of current time — Step 10
     db/
-      engine.py           async engine/session, RLS session hook
-      models/              SQLAlchemy models, one file per aggregate
-    contracts/            Pydantic canonical models — write these BEFORE tables
-    api/v1/                versioned routers
-    services/               business logic, called by routers
-    validators/              PAN/GSTIN/Udyam checksum validators
-  alembic/
-  tests/
+      engine.py           async engine/session, RLS session hook — Step 4
+      base.py               DeclarativeBase, shared mixins — Step 6
+      models/               tenant, borrower, application, audit,
+                             idempotency, api_key — Step 6
+    contracts/            common, application, financial — Step 5
+                           (write these BEFORE tables — final architecture.txt §14.1)
+    api/
+      deps.py               auth, tenant resolution, session, clock — Step 8
+      errors.py             error envelope + handlers — Step 8
+      v1/                    health, applications, tenants — Step 8
+    services/              applications, idempotency (Step 9), audit (Step 11)
+    validators/             identifiers.py — PAN/GSTIN checksum/Udyam — Step 5
+  alembic/                 not created yet — `alembic init` runs in Step 7
+  tests/                  one file per step's test target (see phase1.txt);
+                          currently docstring stubs, 0 tests collected
+  .env.example             keys named, values blank — populated in Step 3
 ```
 
 ## Rules that must never be silently broken
