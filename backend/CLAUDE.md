@@ -18,7 +18,14 @@ request, and `set_tenant_context()` is the RLS hook Step 6 will call — 9
 engine tests pass live against Neon, including one proving tenant context
 never leaks between sessions. Connection pooling is intentionally off
 (owner decision); `prepare_threshold=None` stays set defensively regardless.
-Next up is Step 5 (canonical contracts) — see `../phase1.txt`.
+`contracts/` (Step 5) now has PAN/GSTIN/Udyam validators — GSTIN's Mod-36
+checksum was hand-computed against a real GSTIN and verified correct
+*before* any code was written, then pinned as a regression test — plus
+`MoneyPaise` (INR-only), `AsOf`/`UtcDatetime`, `EntityType`, `LoanPurpose`,
+`ApplicationIn`/`ApplicationOut`/`ApplicationStatus`, and the
+`CanonicalFinancialData` shapes Phase 2 will read. 57 new tests this step;
+full non-network suite 75/75. Next up is Step 6 (multi-tenant schema + RLS)
+— see `../phase1.txt`.
 
 ## Source of truth for architecture
 
@@ -53,7 +60,8 @@ purpose — do not import them before their phase arrives.
 
 Skeleton created Phase 1 Step 1 (2026-08-13). Most non-`__init__.py`
 modules are still docstring-only stubs naming the step that fills them in —
-`config.py` (Step 3) and `db/engine.py` (Step 4) are implemented. Check a
+`config.py` (Step 3), `db/engine.py` (Step 4), `contracts/`, and
+`validators/identifiers.py` (both Step 5) are implemented. Check a
 module's docstring before assuming it's unimplemented vs. just
 not-yet-reached.
 
@@ -70,14 +78,16 @@ backend/
       base.py               DeclarativeBase, shared mixins — Step 6
       models/               tenant, borrower, application, audit,
                              idempotency, api_key — Step 6
-    contracts/            common, application, financial — Step 5
-                           (write these BEFORE tables — final architecture.txt §14.1)
+    contracts/            IMPLEMENTED (Step 5) — common, application,
+                           financial (write these BEFORE tables —
+                           final architecture.txt §14.1)
     api/
       deps.py               auth, tenant resolution, session, clock — Step 8
       errors.py             error envelope + handlers — Step 8
       v1/                    health, applications, tenants — Step 8
     services/              applications, idempotency (Step 9), audit (Step 11)
-    validators/             identifiers.py — PAN/GSTIN checksum/Udyam — Step 5
+    validators/             IMPLEMENTED (Step 5) — identifiers.py, PAN/GSTIN
+                           checksum/Udyam
   alembic/                 not created yet — `alembic init` runs in Step 7
   tests/                  one file per step's test target (see phase1.txt);
                           currently docstring stubs, 0 tests collected
