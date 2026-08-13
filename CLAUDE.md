@@ -74,7 +74,7 @@ not silently violate them while "just getting something working."
 
 ## Current status
 
-Phase 1 (Foundation) is in progress. Steps 0-12 done: open decisions frozen,
+Phase 1 (Foundation) is COMPLETE — tagged `p1-foundation`. Steps 0-12 done: open decisions frozen,
 package skeleton, dependencies, fail-fast config, a live async DB engine
 against Neon (connecting as a dedicated non-owner role, `ankura_app`, never
 the schema owner), the canonical contracts (PAN/GSTIN/Udyam validators —
@@ -154,6 +154,25 @@ gotcha found live while wiring this up. See `phase1.txt` for the live
 checklist and what's next. No credit logic, feature engine, or LLM
 integration exists yet by design — Phase 1 is the multi-tenant API +
 schema + audit spine only.
+
+Phase 1 exit checklist (2026-08-13): every item live-verified against real
+Neon, not assumed — a real curl POST with a real API key + Idempotency-Key
+created an application and replayed byte-identically; RLS, audit-chain
+(incl. tamper detection), and clock-discipline test suites all re-run
+green; `lint-and-typecheck`/`secret-scan` green on `main` (a real
+Dependabot dependency-update PR already landed through them); `test`
+(the ephemeral-Neon-branch job) is the one known-red job, deliberately —
+the owner deferred adding its Neon CI secrets. Tagged `p1-foundation`.
+`final architecture.txt` §16 captures five implementation patterns P3's
+Decision Record work should adopt from the start rather than rediscover:
+audit/ledger writes need their own transaction (not the request's, so a
+rejection/failure doesn't erase the row recording it), idempotency must
+claim before doing the work not after, `SELECT ... FOR UPDATE` needs
+UPDATE privilege an append-only role deliberately lacks (use a Postgres
+advisory lock), chain ordering must walk by hash pointer not timestamp
+(Postgres's `now()` is transaction-constant), and dev Neon runs in
+`aws-us-east-2` (confirmed, not a residency violation — the guard is
+`ENV=prod`-only).
 
 ## Working conventions for this repo
 

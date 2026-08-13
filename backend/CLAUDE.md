@@ -158,7 +158,28 @@ testing secret-scanning yourself, don't reach for a famous textbook
 example — it may be allowlisted on purpose. `test` (the Neon-branch job)
 fails on every run so far, expected: `NEON_API_KEY`/`NEON_PROJECT_ID`/
 `CI_API_KEY_PEPPER` are deliberately not set yet, owner's call to revisit
-later. Next up is the Phase 1 exit checklist.
+later. Phase 1 exit checklist is also done — tagged `p1-foundation`. Live-
+verified rather than assumed: `uv run fastapi dev` brought up a real local
+API against Neon (Windows gotcha found live — `fastapi dev`'s own CLI
+banner crashes with `UnicodeEncodeError` on a non-UTF-8 console; fixed
+with `PYTHONIOENCODING=utf-8 PYTHONUTF8=1`, now in README); a real curl
+POST with a real API key + Idempotency-Key created an application and,
+replayed byte-for-byte, returned an identical response; `test_tenant_
+isolation.py`, `test_audit.py` (including tamper detection), and `test_
+clock_discipline.py` all re-run green; `lint-and-typecheck` and `secret-
+scan` green on the latest `main` (a real Dependabot PR — actions/checkout
+v4→v7 — already landed through it); `test` still red only because the
+owner deliberately deferred the Neon CI secrets. `final architecture.txt`
+§16 now carries five patterns for P3 to default to rather than
+rediscover: audit/ledger writes need their own transaction decoupled from
+the request they describe, idempotency must claim before the work not
+after, `SELECT ... FOR UPDATE` needs UPDATE privilege an append-only
+role deliberately lacks (use an advisory lock), Postgres's `now()` is
+transaction-constant so chain ordering must walk by hash pointer not
+timestamp, and dev Neon is confirmed live in `aws-us-east-2` (not a
+residency violation — the guard only applies to `ENV=prod`). Phase 1 is
+closed. Next: Phase 2 (200-borrower synthetic cohort + deterministic
+feature engine, per `final architecture.txt` §14.2's pinned formulas).
 
 ## Source of truth for architecture
 
