@@ -1,139 +1,92 @@
-# Ankura Backend
+# Ankura
 
-FastAPI service implementing Ankura's governed credit-decisioning API — the
-part of the system that lenders integrate into their LOS. See the repo root
-[`README.md`](../README.md) for what Ankura is; this document is setup and
-day-to-day commands only.
+**A governed AI decisioning layer for Indian MSME lending.**
 
-Full architecture is locked in [`../final architecture.txt`](../final%20architecture.txt).
-Current build checklist is [`../phase1.txt`](../phase1.txt).
+Ankura plugs into an NBFC or LSP's existing loan origination system and turns
+consented bank, GST, and bureau data into a credit recommendation that ships
+with a complete, reproducible, regulator-ready **Decision Record** — routing
+anything uncertain to a human reviewer with the case pre-assembled.
 
-## Stack
+> A consent-driven decisioning component that transforms verified MSME
+> financial data into explainable credit recommendations, with mandatory
+> human review above configurable thresholds, and a decision that can be
+> replayed exactly, months later, against the policy version that produced it.
 
-Python 3.12 · FastAPI · Pydantic v2 · SQLAlchemy 2 (async) · Alembic ·
-psycopg3 · Postgres (Neon in dev, Cloud SQL in prod) · LangGraph (from Phase
-4) · Gemini via Vertex AI (from Phase 5) · uv for dependency management.
+Ankura is not a lender, not a loan origination system, not an Account
+Aggregator, and not "AI that approves loans." It is a technology service
+provider: the AI explains, a deterministic policy engine decides the numbers,
+and a human owns anything above threshold.
 
-## Prerequisites
+## Why this project, and why now
 
-- Python 3.12 (see `.python-version`)
-- [uv](https://docs.astral.sh/uv/) installed
-- A Neon Postgres project (free tier is fine for development)
-- `git`
+India's Account Aggregator network and RBI's Unified Lending Interface have
+made consented financial data plumbing a commodity — not a differentiator.
+What NBFCs lack, and what recent RBI regulation (the Digital Lending
+Directions 2025, the FREE-AI framework, and the DPDP Rules) now actively
+requires of them, is the ability to **defend an AI-influenced credit decision**:
+reproduce it, explain it, show who reviewed it, and prove the policy that
+produced it. That gap — not another way to read a bank statement — is what
+Ankura builds. The full market analysis and reasoning live in
+[`ankuraworkflow.txt`](./ankuraworkflow.txt).
 
-## Setup
-
-```bash
-uv sync
-cp .env.example .env    # fill in the values described below
-```
-
-### Environment variables
-
-Copy `.env.example` and fill every key — the app fails fast at startup if any
-required setting is missing (this is intentional; see `src/ankura/config.py`).
-
-| Variable | Notes |
-| --- | --- |
-| `ENV` | `local` \| `dev` \| `prod` |
-| `DATABASE_URL` | **Pooled** Neon endpoint (`…-pooler.neon.tech`), used by the running app |
-| `DATABASE_DIRECT_URL` | **Unpooled** Neon endpoint, used only by Alembic migrations |
-| `APP_DB_ROLE` | Name of the dedicated non-owner Postgres role the app connects as |
-| `LOG_LEVEL` | e.g. `INFO` |
-| `API_KEY_PEPPER` | Server-side secret used when hashing tenant API keys |
-
-Why two database URLs: Neon fronts Postgres with PgBouncer in transaction
-mode, which does not support session-level prepared statements. Migrations
-(DDL) must run against the direct/unpooled endpoint; the app runs against the
-pooled endpoint. Mixing these up is the most common first-week Neon mistake.
-
-### Database role and RLS
-
-The app must connect as a **dedicated, non-owner, non-superuser** Postgres
-role — owners and superusers silently bypass Row Level Security. Every
-tenant-scoped table has `ENABLE ROW LEVEL SECURITY` and `FORCE ROW LEVEL
-SECURITY`; tenant context is set per-transaction via `SET LOCAL
-app.tenant_id`. See `../final architecture.txt` §14.4 for the full rule set.
-
-## Running locally
-
-```bash
-uv run alembic upgrade head              # apply migrations (uses DATABASE_DIRECT_URL)
-uv run fastapi dev src/ankura/main.py     # start the dev server
-```
-
-API docs at `http://localhost:8000/docs` once running.
-
-## Testing
-
-```bash
-uv run pytest                 # full suite
-uv run pytest --cov=ankura    # with coverage (CI gate: 80%)
-```
-
-Two tests are load-bearing and should never be weakened:
-
-- `test_tenant_isolation.py` — passes even with the ORM's own `tenant_id`
-  filter removed, proving isolation is enforced by Postgres RLS, not just
-  application code.
-- `test_clock_discipline.py` — fails the build if `datetime.now()` /
-  `utcnow()` / `date.today()` / `time.time()` appear anywhere outside
-  `src/ankura/clock.py`.
-
-## Code quality
-
-```bash
-uv run ruff check .
-uv run ruff format --check .
-uv run mypy src/ankura
-```
-
-`pre-commit` runs these plus `gitleaks` (secret scanning) automatically:
-
-```bash
-uv run pre-commit install
-```
-
-## Migrations
-
-```bash
-uv run alembic revision --autogenerate -m "describe the change"
-uv run alembic upgrade head
-```
-
-Autogenerate must report an empty diff immediately after `upgrade head` — if
-it doesn't, a model and the schema have drifted. Every migration needs a
-working `downgrade()`.
-
-## Project layout
+## Repository layout
 
 ```text
-src/ankura/
-  main.py          FastAPI app factory
-  config.py        Settings — fails fast on missing/invalid config
-  clock.py          The only permitted source of "now" in the codebase
-  db/
-    engine.py         Async engine, session factory, RLS tenant-context hook
-    models/             SQLAlchemy models (tenants, borrowers, applications, …)
-  contracts/           Pydantic canonical request/response/domain models
-  api/v1/                Versioned FastAPI routers
-  services/               Business logic
-  validators/              PAN / GSTIN / Udyam format + checksum validation
-alembic/               Migrations (env.py uses DATABASE_DIRECT_URL)
-tests/
+.
+├── README.md                  you are here
+├── CLAUDE.md                  project memory / conventions for AI assistants
+├── ankuraworkflow.txt         business + technical workflow, market analysis,
+│                               regulatory landscape, phase skeleton
+├── final architecture.txt     locked technical architecture and stack decisions
+├── phase1.txt                 current phase's checkbox-gated build plan
+├── smallBusineddloans.txt     original raw research notes (background only)
+└── backend/                   FastAPI service — the Decision API
+    ├── README.md               backend setup and commands
+    └── CLAUDE.md                backend-specific coding conventions
 ```
 
-## Current scope (Phase 1)
+A `frontend/` (Next.js reviewer + governance consoles) is planned for a later
+phase and does not exist yet — see the phase sequence below.
 
-Multi-tenant application intake API only: auth, validation, idempotency,
-audit trail, as-of-time discipline. **No credit logic yet** — no feature
-engine, no scoring, no policy engine, no LLM calls. That is intentional; see
-`../phase1.txt` for what's in scope and `../ankuraworkflow.txt` Part 11 for
-the full phase sequence.
+## Documentation map
 
-## Conventions
+| Read this | To understand |
+|---|---|
+| [`ankuraworkflow.txt`](./ankuraworkflow.txt) | The full picture: why this problem, why now, who pays, the product shape, the 12-phase build sequence, and open decisions |
+| [`final architecture.txt`](./final%20architecture.txt) | The locked stack and architecture, including connection-string handling, RLS rules, and canonical metric formulas |
+| [`phase1.txt`](./phase1.txt) | What's being built right now, step by step, with pass/fail acceptance checks |
+| [`backend/README.md`](./backend/README.md) | How to run the backend locally |
+| [`CLAUDE.md`](./CLAUDE.md) / [`backend/CLAUDE.md`](./backend/CLAUDE.md) | Conventions and non-negotiable rules for anyone (human or AI) writing code here |
 
-See [`CLAUDE.md`](./CLAUDE.md) in this directory for the full list of
-non-negotiable backend conventions (clock discipline, idempotency, money as
-integer paise, RLS, contracts-before-tables, canonical metric formulas). Read
-it before making structural changes.
+## Product principles
+
+1. **The Decision Record is the product**, not the credit score. Every
+   decision must be reproducible, months later, from stored evidence alone.
+2. **The LLM never holds the pen.** Scoring, pricing, and routing are
+   deterministic, versioned policy-as-code. The two legitimate LLM surfaces
+   are explanation generation and reviewer case-brief synthesis — both
+   grounded in already-computed structured evidence, never inventing numbers.
+3. **Human-gated by default above threshold.** Small, high-confidence cases
+   may auto-decide; everything else goes to a reviewer with a pre-assembled
+   brief, not a wall of raw data.
+4. **Multi-tenant and audit-first from day one.** Postgres Row Level
+   Security, an append-only hash-chained audit trail, and strict as-of-time
+   discipline are foundational, not bolted on later.
+5. **Bring your own data provider.** Account Aggregator, ULI, and bureau
+   integrations sit behind a common interface — Ankura does not lock a lender
+   into one AA.
+
+## Current status
+
+**Phase 1 — Foundation** is in progress: a multi-tenant FastAPI service that
+accepts an MSME loan application over an authenticated, idempotent API and
+stores it under strict tenant isolation with a verifiable audit trail. No
+credit logic (scoring, features, policy, LLM) exists yet — that starts in
+Phase 2 and Phase 3. See [`phase1.txt`](./phase1.txt) for the live checklist
+and [`ankuraworkflow.txt`](./ankuraworkflow.txt) Part 11 for the full
+phase-by-phase roadmap (through Phase 9: monitoring and early-warning).
+
+## Getting started
+
+See [`backend/README.md`](./backend/README.md) for setup and local
+development instructions.

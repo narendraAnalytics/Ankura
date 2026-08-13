@@ -1,115 +1,92 @@
-# Ankura Backend — Project Memory
+# Ankura — Project Memory
 
-Read `../CLAUDE.md` first for product context. This file is backend-specific:
-stack conventions, patterns, and gotchas that apply while writing code here.
+This file orients any AI assistant (or human) working in this repository. Read
+it before touching code or planning docs.
 
-## Source of truth for architecture
+## What this project is
 
-`../final architecture.txt` is the locked technical decision record, including
-the §14 addendum (connection strings, RLS rules, canonical metric formulas).
-`../phase1.txt` is the current phase's checklist. Follow both exactly; do not
-improvise structure that contradicts them without flagging it to the user
-first — architecture changes get written back into `final architecture.txt`,
-not left implicit in a diff.
+Ankura is a **governed AI decisioning layer for Indian MSME lenders** — not a
+lender, not a data aggregator, not a LOS. It plugs into an NBFC/LSP's existing
+loan origination system via API, turns consented bank + GST + bureau data into
+a reproducible, explainable, human-gated credit decision, and hands back a
+**Decision Record** the lender can show a regulator or auditor on demand.
 
-## Stack (locked)
+The one-line pitch (do not drift from this framing in code, naming, or docs):
 
-- Python 3.12, managed with **uv** (`uv sync`, `uv run …`) — never bare `pip`
-- FastAPI + Pydantic v2, SQLAlchemy 2 (async), Alembic, psycopg3
-- Postgres: **Neon** in dev, **Cloud SQL (asia-south1)** in prod — app code
-  stays portable, no provider-specific SQL features
-- LangGraph for orchestration (from Phase 4 onward — not used yet)
-- Gemini via Vertex AI for the two bounded LLM surfaces only (from Phase 5)
-- Firebase Auth for the human-facing consoles only (from Phase 4) — Phase 1's
-  API uses tenant API keys, not Firebase
-- Testing: pytest + pytest-asyncio + pytest-cov; ruff + mypy for quality gates
+> A consent-driven decisioning component that transforms verified MSME
+> financial data into explainable credit recommendations, with mandatory human
+> review above configurable thresholds, and a decision that can be replayed
+> exactly, months later, against the policy version that produced it.
 
-Dependencies for later phases (`langgraph`, `langchain-google-genai`,
-`firebase-admin`, `google-cloud-*`) are already in `pyproject.toml` on
-purpose — do not import them before their phase arrives.
+**The product being sold is the Decision Record — reproducibility and audit
+defensibility — not the credit score.** The data-aggregation layer (AA/ULI) is
+commodity infrastructure in 2026, not a differentiator. See
+`ankuraworkflow.txt` Part 0–2 for the full reasoning; do not re-litigate it
+without new information.
 
-## Layout
+## Document map — read in this order
 
-```
-backend/
-  src/ankura/
-    main.py            FastAPI app factory
-    config.py           pydantic-settings, fail-fast on missing config
-    clock.py             THE ONLY source of current time — see below
-    db/
-      engine.py           async engine/session, RLS session hook
-      models/              SQLAlchemy models, one file per aggregate
-    contracts/            Pydantic canonical models — write these BEFORE tables
-    api/v1/                versioned routers
-    services/               business logic, called by routers
-    validators/              PAN/GSTIN/Udyam checksum validators
-  alembic/
-  tests/
-```
+| File | Purpose | When to open it |
+|---|---|---|
+| `ankuraworkflow.txt` | Full business + technical workflow: market analysis, regulatory landscape, product shape, phase skeleton, open decisions | Understanding *why* before *what* |
+| `final architecture.txt` | Locked technical architecture + stack decisions, including the §14 addendum with formulas, connection strings, and RLS rules | Before writing any backend code |
+| `phase1.txt` | Current phase's checkbox-gated build plan | Day-to-day implementation reference |
+| `smallBusineddloans.txt` | Original raw research notes on AA/GST/Setu mechanics | Background only — superseded where it conflicts with the two files above |
+| `backend/CLAUDE.md` | Backend-specific conventions (stack, patterns, gotchas) | Whenever editing `backend/` |
+| `backend/README.md` | Backend setup/run instructions | Environment setup |
 
-## Rules that must never be silently broken
+**Precedence when documents disagree:** `final architecture.txt` > `ankuraworkflow.txt`
+> `smallBusineddloans.txt`. If a phase teaches something that changes an
+architecture decision, amend `final architecture.txt`, not the phase file.
 
-**Clock discipline.** `datetime.now()`, `datetime.utcnow()`, `date.today()`,
-`time.time()` are banned everywhere except `clock.py`. Every request has an
-explicit `as_of` (business time) distinct from `recorded_at` (wall-clock write
-time). This exists so P3's decision replay is possible; retrofitting it later
-is a rewrite, not a patch.
+## Non-negotiable product rules
 
-**Idempotency.** Every mutating POST requires an `Idempotency-Key` header.
-Same key + same body → replay stored response. Same key + different body →
-409. The idempotency record and the entity it protects are written in the
-*same* transaction.
+These come from the regulatory reframe (RBI Digital Lending Directions 2025,
+FREE-AI framework, DPDP Rules 2025) and from hard architecture decisions. Do
+not silently violate them while "just getting something working."
 
-**Money.** Integer paise (`amount_paise: int`), never `float`, never
-`Decimal` unless a specific calculation demands it and it's converted back to
-paise before storage.
+1. **The LLM is never load-bearing for the credit decision.** All scoring,
+   thresholds, pricing, and routing are deterministic Python/policy-as-code.
+   The only legitimate LLM surfaces are (a) explanation generation from
+   already-computed structured evidence, and (b) reviewer case-brief
+   synthesis. Neither may compute a number the LLM invents.
+2. **Two agents, not six.** Do not resurrect the six-chatbot framing from the
+   early research docs. Orchestrator, data aggregation, underwriting, and
+   pricing are deterministic code orchestrated by LangGraph as a state
+   machine — not LLM agents.
+3. **Every decision must be replayable.** No `datetime.now()` / `utcnow()`
+   outside the clock module. Every mutating action pins the versions that
+   produced it (policy version, feature engine version, model version).
+4. **Multi-tenant from day one, enforced in the database.** Postgres RLS,
+   `FORCE ROW LEVEL SECURITY`, non-owner app role, `SET LOCAL` per
+   transaction — never only an application-layer `WHERE tenant_id = …`.
+5. **Money is integer paise, never float.**
+6. **Raw financial payloads (bank/GST/bureau) are short-retention and never
+   land in a vector store or a log line.** Derived features are the durable
+   artefact.
+7. **No secrets in code, env files in git, or documents in this repo.** If a
+   provider credential ever appears in a committed file, treat it as
+   compromised and rotate it — see `final architecture.txt` §14.5.
 
-**Row Level Security, not just app-layer filters.** Every tenant-scoped table:
-`ENABLE ROW LEVEL SECURITY` + `FORCE ROW LEVEL SECURITY`, policy against
-`current_setting('app.tenant_id')`, set via `SET LOCAL` per transaction (never
-plain `SET` — it leaks across pooled connections). The app DB role must be a
-non-owner, non-superuser — owners bypass RLS silently. `tenant_id` is the
-leading column of every index on a tenant table. When testing isolation,
-temporarily strip the ORM's own `WHERE tenant_id = …` filter and confirm RLS
-alone still blocks cross-tenant reads — that's the real test.
+## Current status
 
-**Two Neon connection strings.** `DATABASE_URL` (pooled, `…-pooler.neon.tech`)
-for the app; `DATABASE_DIRECT_URL` (unpooled) for Alembic only. Neon's pooler
-runs PgBouncer in transaction mode, which breaks session-level prepared
-statements — psycopg3 handles this better than asyncpg but still needs
-`prepare_threshold` set deliberately.
+Phase 1 (Foundation) is in progress. See `phase1.txt` for the live checklist.
+No credit logic, feature engine, or LLM integration exists yet by design —
+Phase 1 is the multi-tenant API + schema + audit spine only.
 
-**Contracts before tables.** Every DB table is derived from a Pydantic model
-in `contracts/`, written first. Don't invent a column that has no contract.
+## Working conventions for this repo
 
-**Canonical metric formulas live in exactly one place** (feature engine
-module, arriving Phase 2) and are documented in `final architecture.txt` §14.2
-— `dscr`, `obligation_ratio` (not "FOIR" — that's a retail concept),
-`bounce_ratio`, `bank_gst_gap`, `cash_deposit_ratio`, `customer_concentration`.
-Synthetic ground-truth borrowers (Phase 2) must be generated *from* these
-formulas, never hand-typed to a plausible-looking number.
-
-**No credit logic in Phase 1.** Scoring, features, policy evaluation, pricing
-— none of it belongs yet. If you're writing a DSCR calculation while working
-Phase 1 steps, stop; that's Phase 2/3 scope.
-
-## Testing expectations
-
-- `test_tenant_isolation.py` must pass with the ORM's tenant filter removed
-  (proves RLS, not app code, is the actual boundary).
-- `test_clock_discipline.py` greps the source tree for banned time calls.
-- `test_idempotency.py` includes a concurrent-duplicate-request case, not just
-  sequential replay.
-- Coverage gate: 80% on `src/ankura`, enforced in CI.
-
-## Commands
-
-```bash
-uv sync                          # install deps
-uv run fastapi dev src/ankura/main.py   # local dev server
-uv run pytest                    # tests
-uv run pytest --cov=ankura       # with coverage
-uv run ruff check . && uv run ruff format --check .
-uv run mypy src/ankura
-uv run alembic upgrade head       # migrations (uses DATABASE_DIRECT_URL)
-```
+- This is a two-part repo: planning docs at the root (`*.txt`), code inside
+  `backend/` (its own git history). A `frontend/` (Next.js) will appear in a
+  later phase — do not create it early.
+- Planning docs are plain `.txt`, not Markdown, by the user's existing
+  convention. Keep new planning docs in that format unless asked otherwise.
+- Checkbox files (`phase1.txt` and future `phaseN.txt`) are living documents:
+  tick a box only when its own "PROVE IT" line is actually verified, not when
+  the code merely exists.
+- When a phase surfaces a decision that changes the locked architecture,
+  update `final architecture.txt` directly (see its own §14 pattern) rather
+  than leaving the correction implicit in code.
+- Search the web for anything time-sensitive (RBI circulars, AA ecosystem
+  stats, competitor positioning) before asserting it as current — this market
+  moves fast and the assistant's training data lags it.

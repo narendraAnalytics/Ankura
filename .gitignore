@@ -1,11 +1,6 @@
-# Python-generated files
-__pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
+# Planning docs - intentionally not versioned in this repo
+/*.txt
 
-# Virtual environments
-.venv
-.env
+# OS / editor cruft
+.DS_Store
+Thumbs.db
