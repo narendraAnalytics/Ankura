@@ -70,9 +70,7 @@ _GSTIN_PATTERN = re.compile(r"^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$")
 # Active GST state/UT codes as of 2026: 01-38 inclusive, minus 25 (former
 # Daman & Diu, merged into 26) and 28 (former undivided Andhra Pradesh
 # numbering, retired after the 2014 state reorganisation).
-_VALID_GST_STATE_CODES = frozenset(
-    f"{code:02d}" for code in range(1, 39) if code not in (25, 28)
-)
+_VALID_GST_STATE_CODES = frozenset(f"{code:02d}" for code in range(1, 39) if code not in (25, 28))
 
 # Mod-36 checksum alphabet: digits 0-9 (value = digit), then A-Z (value =
 # 10-35). This is the same alphabet GSTN's own checksum uses.
@@ -114,8 +112,7 @@ def validate_gstin(value: str) -> str:
     state_code = value[:2]
     if state_code not in _VALID_GST_STATE_CODES:
         raise ValueError(
-            f"GSTIN state code {state_code!r} is not a currently active GST "
-            "state/UT code"
+            f"GSTIN state code {state_code!r} is not a currently active GST state/UT code"
         )
     # The 10 characters after the state code must themselves be a
     # structurally valid PAN (PAN has no public checksum, so only
@@ -139,8 +136,7 @@ _UDYAM_PATTERN = re.compile(r"^UDYAM-[A-Z]{2}-[0-9]{2}-[0-9]{7}$")
 def validate_udyam(value: str) -> str:
     if len(value) != 19:
         raise ValueError(
-            f"Udyam registration number must be exactly 19 characters, "
-            f"got {len(value)}: {value!r}"
+            f"Udyam registration number must be exactly 19 characters, got {len(value)}: {value!r}"
         )
     if value != value.upper():
         raise ValueError(f"Udyam registration number must be uppercase, got {value!r}")

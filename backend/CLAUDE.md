@@ -121,8 +121,34 @@ can't), the app-role-cannot-UPDATE guarantee itself, PII exclusion from
 real API. Full suite 134/134 passing live against Neon, ruff clean, mypy
 clean — full run now takes ~15 min, since each audit write is its own DB
 round trip by design; noted in phase1.txt as a performance item to revisit
-before real load, not a Phase 1 blocker. Next up is Step 12 (CI, quality
-gates, secret scanning).
+before real load, not a Phase 1 blocker. Step 12 (CI, quality gates, secret
+scanning) is also done, and changed how work lands in this repo: every
+step through Step 11 was committed directly to `main`; this step adds
+pre-commit's `no-commit-to-branch` hook and asks for GitHub branch
+protection on `main`, both of which exist specifically to block that. That
+conflict was surfaced and asked about rather than silently resolved either
+way — answer was to switch to a PR-based workflow starting with this
+step's own changes. `.pre-commit-config.yaml` lives at the **repo root**
+(monorepo, one `.git`), with `ruff`/`mypy` as `repo: local` hooks shelling
+out to `uv run --project backend <tool>` — never the ruff-pre-commit/
+mirrors-mypy mirrors — so pre-commit always runs exactly what `uv.lock`
+pins. GOTCHA: the ruff hooks need `--project backend`, not `--directory
+backend` — pre-commit passes repo-root-relative filenames as args, and
+`--directory` changes cwd before ruff sees them, breaking every path.
+`--project` only picks the venv/pyproject without touching cwd. mypy's
+hook is unaffected (no filenames passed, one fixed target) and correctly
+uses `--directory`. `.github/workflows/ci.yml` has 3 jobs: lint-and-
+typecheck, secret-scan (`gitleaks/gitleaks-action@v3`, not v2 — v2 is on
+the Node 20 runtime GitHub is retiring from hosted runners later in 2026),
+and test — which creates a real, disposable Neon branch per run via
+`neonctl` (not the `create-branch-action`, which only resolves one role's
+connection string per branch; this needs both `ankura_app` pooled and
+`neondb_owner` unpooled off the *same* branch), runs `alembic upgrade
+head` against it, then the full suite with a coverage gate, then deletes
+the branch unconditionally. Branch protection itself is NOT configured —
+no `gh` CLI or MCP tool for it was available in this session; it's a
+manual step left for the repo owner (documented in the PR and
+`phase1.txt`). Next up is the Phase 1 exit checklist.
 
 ## Source of truth for architecture
 
