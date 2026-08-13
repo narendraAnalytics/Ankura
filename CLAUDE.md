@@ -74,7 +74,7 @@ not silently violate them while "just getting something working."
 
 ## Current status
 
-Phase 1 (Foundation) is in progress. Steps 0-10 done: open decisions frozen,
+Phase 1 (Foundation) is in progress. Steps 0-11 done: open decisions frozen,
 package skeleton, dependencies, fail-fast config, a live async DB engine
 against Neon (connecting as a dedicated non-owner role, `ankura_app`, never
 the schema owner), the canonical contracts (PAN/GSTIN/Udyam validators —
@@ -120,10 +120,23 @@ naive datetime at construction), a ruff `TID251` banned-api rule banning
 `clock.py`, and `test_clock_discipline.py`'s own independent source-tree
 grep as a second enforcement layer — adding the rule surfaced two
 pre-existing `datetime.now(UTC)` calls in test fixtures that predated it,
-both switched to `SystemClock().now()` rather than exempted. See
-`phase1.txt` for the live checklist and what's next. No credit logic,
-feature engine, or LLM integration exists yet by design — Phase 1 is the
-multi-tenant API + schema + audit spine only.
+both switched to `SystemClock().now()` rather than exempted. Step 11
+started the audit chain: an append-only writer (`services/audit.py`) with
+no update/delete path in code or at the database grant level, hash-chained
+per tenant (`event_hash = sha256(canonical_json(...))`) and walked by hash
+POINTER rather than timestamp — Postgres's `now()` is constant for a whole
+transaction, so timestamp ordering can't reliably reconstruct append order
+the way a linked-list-by-hash can. The one deliberate architectural
+deviation: each audit write commits its own short-lived transaction rather
+than sharing the request's, specifically so events describing a REJECTED
+or FAILED request (`AUTH_FAILED`, `APPLICATION_REJECTED_INTAKE`) survive
+even though the request's own transaction rolls back moments later. See
+`backend/CLAUDE.md` for the concurrency (advisory-lock) story and the two
+flagged assumptions about which auth/rejection paths can actually emit an
+event at all (both need a resolvable tenant_id, which not every failure
+path has). See `phase1.txt` for the live checklist and what's next. No
+credit logic, feature engine, or LLM integration exists yet by design —
+Phase 1 is the multi-tenant API + schema + audit spine only.
 
 ## Working conventions for this repo
 

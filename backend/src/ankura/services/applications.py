@@ -24,7 +24,11 @@ from ankura.clock import Clock
 from ankura.contracts.application import ApplicationIn, ApplicationOut, ApplicationStatus
 from ankura.contracts.common import EntityType, LoanPurpose
 from ankura.db.models import Application, Borrower
+from ankura.services import audit as audit_service
 from ankura.services import idempotency as idempotency_service
+
+_ENTITY_TYPE_APPLICATION = "application"
+_ACTOR_TYPE_API_KEY = "api_key"
 
 logger = logging.getLogger(__name__)
 
@@ -127,8 +131,22 @@ async def _upsert_borrower(
 
 
 async def create_application(
-    session: AsyncSession, tenant_id: uuid.UUID, payload: ApplicationIn, clock: Clock
+    session: AsyncSession, tenant_id: uuid.UUID, payload: ApplicationIn, clock: Clock, actor_id: str
 ) -> ApplicationOut:
+    as_of = payload.as_of if payload.as_of is not None else clock.now()
+    application_id = uuid.uuid4()
+
+    await audit_service.append_event(
+        tenant_id,
+        entity_type=_ENTITY_TYPE_APPLICATION,
+        entity_id=application_id,
+        event_type="APPLICATION_RECEIVED",
+        actor_type=_ACTOR_TYPE_API_KEY,
+        actor_id=actor_id,
+        payload={"external_ref": payload.external_ref},
+        occurred_at=as_of,
+    )
+
     existing = await session.execute(
         select(Application).where(
             Application.tenant_id == tenant_id, Application.external_ref == payload.external_ref
@@ -136,6 +154,16 @@ async def create_application(
     )
     existing_row = existing.scalar_one_or_none()
     if existing_row is not None:
+        await audit_service.append_event(
+            tenant_id,
+            entity_type=_ENTITY_TYPE_APPLICATION,
+            entity_id=existing_row.id,
+            event_type="APPLICATION_REJECTED_INTAKE",
+            actor_type=_ACTOR_TYPE_API_KEY,
+            actor_id=actor_id,
+            payload={"reason": "DUPLICATE_EXTERNAL_REF", "external_ref": payload.external_ref},
+            occurred_at=as_of,
+        )
         raise ConflictError(
             "DUPLICATE_EXTERNAL_REF",
             f"application with external_ref {payload.external_ref!r} already exists",
@@ -149,11 +177,17 @@ async def create_application(
 
     _check_identifier_consistency(tenant_id, payload)
 
+    # BORROWER_IDENTIFIER_CONFLICT (raised inside _upsert_borrower) does NOT
+    # get its own APPLICATION_REJECTED_INTAKE event here: it's a borrower
+    # data conflict, not an application-status rejection, and no
+    # application row (real or otherwise) exists yet to anchor the event
+    # to at this point — `application_id` above was only ever generated
+    # for the RECEIVED event, never persisted. Flagged deliberately, same
+    # spirit as this file's other ASSUMPTION FLAGGED notes.
     borrower_id = await _upsert_borrower(session, tenant_id, payload)
 
-    as_of = payload.as_of if payload.as_of is not None else clock.now()
     application = Application(
-        id=uuid.uuid4(),
+        id=application_id,
         tenant_id=tenant_id,
         borrower_id=borrower_id,
         external_ref=payload.external_ref,
@@ -166,6 +200,17 @@ async def create_application(
     session.add(application)
     await session.flush()
     await session.refresh(application)
+
+    await audit_service.append_event(
+        tenant_id,
+        entity_type=_ENTITY_TYPE_APPLICATION,
+        entity_id=application.id,
+        event_type="APPLICATION_VALIDATED",
+        actor_type=_ACTOR_TYPE_API_KEY,
+        actor_id=actor_id,
+        payload={"external_ref": payload.external_ref},
+        occurred_at=as_of,
+    )
 
     return _to_out(
         application,
@@ -184,6 +229,7 @@ async def create_application_idempotent(
     payload: ApplicationIn,
     clock: Clock,
     ttl_hours: int,
+    actor_id: str,
 ) -> tuple[int, dict[str, object]]:
     """Idempotency-Key-wrapped `create_application` — phase1.txt Step 9.
     Returns (status_code, response_body) so the route can serve a
@@ -192,11 +238,11 @@ async def create_application_idempotent(
     """
 
     async def _do_work() -> tuple[int, dict[str, object]]:
-        result = await create_application(session, tenant_id, payload, clock)
+        result = await create_application(session, tenant_id, payload, clock, actor_id)
         return 201, result.model_dump(mode="json")
 
     try:
-        return await idempotency_service.run_idempotent(
+        result = await idempotency_service.run_idempotent(
             session,
             tenant_id,
             idempotency_key,
@@ -210,6 +256,20 @@ async def create_application_idempotent(
             "IDEMPOTENCY_KEY_REUSE",
             f"Idempotency-Key {idempotency_key!r} was already used with a different request body",
         ) from exc
+
+    if result.replayed:
+        await audit_service.append_event(
+            tenant_id,
+            entity_type=_ENTITY_TYPE_APPLICATION,
+            entity_id=uuid.UUID(str(result.body["id"])),
+            event_type="IDEMPOTENT_REPLAY",
+            actor_type=_ACTOR_TYPE_API_KEY,
+            actor_id=actor_id,
+            payload={"idempotency_key": idempotency_key},
+            occurred_at=clock.now(),
+        )
+
+    return result.status_code, result.body
 
 
 async def get_application(

@@ -58,6 +58,7 @@ async def create_application(
         payload,
         clock,
         ttl_hours=get_settings().idempotency_key_ttl_hours,
+        actor_id=str(tenant.api_key_id),
     )
     return JSONResponse(status_code=response_status, content=response_body)
 

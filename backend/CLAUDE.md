@@ -85,7 +85,44 @@ since the checklist's own wording ("anywhere outside clock.py") didn't
 carve out an exception either. `FrozenClock` reaches request handling via
 FastAPI's own `app.dependency_overrides[get_clock]`, not a monkeypatch.
 Full suite 125/125 passing live against Neon, ruff clean (including the new
-rule), mypy clean. Next up is Step 11 (audit events skeleton / hash chain).
+rule), mypy clean. Step 11 (audit events skeleton) is also done:
+`services/audit.py`'s `append_event` is the only write path (no
+update/delete function exists, and `audit_events` has no UPDATE/DELETE
+grant for the app role at the database level either, from migration 0002).
+The one non-obvious design call: `append_event` opens and commits its
+*own* short-lived session rather than writing on the caller's request
+session, because several P1 events (`AUTH_FAILED`, `APPLICATION_REJECTED_
+INTAKE`) fire exactly when the request is about to be rejected, and this
+codebase's one-transaction-per-request pattern (`get_db_session`) rolls
+the *whole* request back the instant the corresponding `ApiError` is
+raised — a shared-transaction audit write would vanish along with
+everything else it's supposed to be recording. The hash chain
+(`event_hash = sha256(canonical_json(...))`, reusing idempotency's
+canonical-JSON shape) is per-tenant, and chain verification walks by
+*hash pointer* (`event.prev_hash == parent.event_hash`), never by
+`recorded_at` — Postgres's `now()` is constant for the whole transaction,
+not per-statement, so timestamp ordering (with a random UUID `id` as
+tie-breaker) can't reliably reconstruct real append order; the hash
+pointer names an exact single predecessor with no such ambiguity.
+Concurrent appends for the same tenant are serialized with a
+transaction-scoped Postgres advisory lock (`pg_advisory_xact_lock`, needs
+no table grants) instead of `SELECT ... FOR UPDATE`, since that clause
+requires UPDATE privilege in Postgres — which this role deliberately
+doesn't have on this table. Two assumptions flagged in-code, same spirit
+as prior steps: `AUTH_FAILED` only fires for `AUTH_REVOKED` (an unknown
+key never resolves a tenant_id to anchor the NOT-NULL-tenant_id row to),
+and `APPLICATION_REJECTED_INTAKE` only fires for `DUPLICATE_EXTERNAL_REF`
+(not `BORROWER_IDENTIFIER_CONFLICT`, which has no application row to
+reference). `test_audit.py` (9 tests) covers chain linkage, 100-event
+verification, tamper detection naming the first broken link (PROVE IT —
+an owner-connection `UPDATE` is the only way to tamper, since the app role
+can't), the app-role-cannot-UPDATE guarantee itself, PII exclusion from
+`payload_json`, and all 6 P1 event types observed end to end through the
+real API. Full suite 134/134 passing live against Neon, ruff clean, mypy
+clean — full run now takes ~15 min, since each audit write is its own DB
+round trip by design; noted in phase1.txt as a performance item to revisit
+before real load, not a Phase 1 blocker. Next up is Step 12 (CI, quality
+gates, secret scanning).
 
 ## Source of truth for architecture
 
@@ -161,8 +198,10 @@ backend/
     services/
       applications.py        IMPLEMENTED (Step 8) — create/get/list,
                             borrower upsert, keyset pagination
-      idempotency.py          Step 9
-      audit.py                 Step 11
+      idempotency.py          IMPLEMENTED (Step 9) — claim-before-work
+                            SAVEPOINT, byte-identical replay
+      audit.py                 IMPLEMENTED (Step 11) — append-only writer,
+                            self-contained session, hash-chain by pointer
     validators/             IMPLEMENTED (Step 5) — identifiers.py, PAN/GSTIN
                            checksum/Udyam
   alembic/                 IMPLEMENTED (Step 7) — migration 0001 (tables,

@@ -49,6 +49,7 @@ import hashlib
 import json
 import uuid
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any, cast
 
@@ -75,6 +76,17 @@ class IdempotencyKeyReuseError(Exception):
 class _LostRaceError(Exception):
     """Internal control-flow signal only: a concurrent request already
     claimed this key. Always caught inside `run_idempotent`."""
+
+
+@dataclass(frozen=True)
+class IdempotentResult:
+    status_code: int
+    body: dict[str, Any]
+    replayed: bool
+    """True whenever this response came from a previously stored record —
+    either found immediately, or recovered after losing a concurrent claim
+    race — rather than from a fresh `do_work` call. Callers use this to
+    decide whether to emit an IDEMPOTENT_REPLAY audit event (Step 11)."""
 
 
 def fingerprint(payload: dict[str, Any]) -> str:
@@ -154,7 +166,7 @@ async def run_idempotent(
     clock: Clock,
     do_work: Callable[[], Awaitable[tuple[int, dict[str, Any]]]],
     ttl_hours: int = DEFAULT_TTL_HOURS,
-) -> tuple[int, dict[str, Any]]:
+) -> IdempotentResult:
     """Run `do_work` exactly once per (tenant_id, key); every later call with
     the same key + the same `request_body` replays the first response
     instead of running `do_work` again. A same key + different body raises
@@ -166,7 +178,9 @@ async def run_idempotent(
     if existing is not None:
         if existing.request_fingerprint != request_fingerprint:
             raise IdempotencyKeyReuseError(key)
-        return existing.response_status, _normalize(existing.response_body)
+        return IdempotentResult(
+            existing.response_status, _normalize(existing.response_body), replayed=True
+        )
 
     expires_at = clock.now() + timedelta(hours=ttl_hours)
     try:
@@ -186,9 +200,11 @@ async def run_idempotent(
             ) from None
         if winner.request_fingerprint != request_fingerprint:
             raise IdempotencyKeyReuseError(key) from None
-        return winner.response_status, _normalize(winner.response_body)
+        return IdempotentResult(
+            winner.response_status, _normalize(winner.response_body), replayed=True
+        )
 
-    return response_status, _normalize(response_body)
+    return IdempotentResult(response_status, _normalize(response_body), replayed=False)
 
 
 async def purge_expired(session: AsyncSession, clock: Clock) -> int:
