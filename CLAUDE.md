@@ -28,10 +28,12 @@ without new information.
 
 | File | Purpose | When to open it |
 |---|---|---|
+| `endgoal.txt` | The full end-to-end product narrative (intake → ... → Decision Record → LOS) and the P1-P10 phase table | Orientation — what the finished product looks like and where the current phase sits in it |
 | `ankuraworkflow.txt` | Full business + technical workflow: market analysis, regulatory landscape, product shape, phase skeleton, open decisions | Understanding *why* before *what* |
-| `final architecture.txt` | Locked technical architecture + stack decisions, including the §14 addendum with formulas, connection strings, and RLS rules | Before writing any backend code |
-| `phase1.txt` | Current phase's checkbox-gated build plan | Day-to-day implementation reference |
-| `smallBusineddloans.txt` | Original raw research notes on AA/GST/Setu mechanics | Background only — superseded where it conflicts with the two files above |
+| `final architecture.txt` | Locked technical architecture + stack decisions, including the §14 addendum with formulas, connection strings, and RLS rules, and §16's Phase 1 close-out patterns | Before writing any backend code |
+| `phase2.txt` | **Current phase's** checkbox-gated build plan (synthetic cohort + feature engine) | Day-to-day implementation reference |
+| `phase1.txt` | Completed phase's build plan — full step-by-step history, every gotcha found live, kept for reference | Understanding how/why P1 ended up the way it did |
+| `smallBusineddloans.txt` | Original raw research notes on AA/GST/Setu mechanics | Background only — superseded where it conflicts with the files above |
 | `backend/CLAUDE.md` | Backend-specific conventions (stack, patterns, gotchas) | Whenever editing `backend/` |
 | `backend/README.md` | Backend setup/run instructions | Environment setup |
 
@@ -74,105 +76,48 @@ not silently violate them while "just getting something working."
 
 ## Current status
 
-Phase 1 (Foundation) is COMPLETE — tagged `p1-foundation`. Steps 0-12 done: open decisions frozen,
-package skeleton, dependencies, fail-fast config, a live async DB engine
-against Neon (connecting as a dedicated non-owner role, `ankura_app`, never
-the schema owner), the canonical contracts (PAN/GSTIN/Udyam validators —
-GSTIN's Mod-36 checksum hand-verified against a real GSTIN before any code
-was written — `MoneyPaise` INR-only, `AsOf`/`UtcDatetime`, application and
-financial-data shapes), the full multi-tenant schema live in Neon with Row
-Level Security enforced on every genuinely tenant-scoped table, and that
-same schema now also expressed as real Alembic migrations (0001 tables,
-0002 RLS/policies/grants — RLS is hand-written raw SQL, Alembic can't
-autogenerate it). One deliberate exception: `tenants`/`api_keys` are NOT
-RLS-scoped — they're bootstrap/auth tables that establish tenant identity,
-so RLS-gating them on a tenant_id you don't have yet would be circular;
-this is the standard pattern, not a gap. A live RLS bug was found and
-fixed in Step 6 (policy needed `NULLIF(current_setting(...), '')::uuid`,
-not a bare `current_setting` call, or a reused connection with no tenant
-context set raised an error instead of cleanly returning no rows) — see
-`final architecture.txt` §14.4. Step 7 proved the migrations on a
-disposable Neon branch (full upgrade/downgrade/upgrade + empty-diff cycle)
-before `alembic stamp head`-ing the real `production` branch, since that
-branch's schema already existed from Step 6's direct `create_all()`. Step 8
-built the application intake API on top of all this: tenant API key auth
-(HMAC-SHA256 + pepper, not a slow password KDF — API keys are high-entropy
-secrets, not human passwords), a single `{error:{code,message,details,
-request_id}}` envelope for every rejection, and `POST`/`GET
-/v1/applications` with keyset (cursor) pagination and an atomic
-`INSERT ... ON CONFLICT DO UPDATE` borrower upsert (never SELECT-then-
-INSERT, which would race). Building it required pulling two things forward
-out of their own later steps: a minimal `Clock` protocol + `SystemClock`,
-and a new `security.py` module for the key hashing. Step 9 made POST
-/v1/applications idempotent: `Idempotency-Key` is required (missing →
-400), and the request is served by claiming `(tenant_id, key)` with a
-placeholder row *before* the underlying work runs, then finalizing it with
-the real response afterward, all inside one SAVEPOINT nested in the
-request's own transaction — claiming before the work, not after, is what
-makes two truly concurrent identical requests block on the idempotency
-table's own unique index instead of racing each other straight into
-`applications`' own unique constraints. See `backend/CLAUDE.md` for the
-concurrency-bug story and the JSONB key-ordering fix that byte-identical
-replay needed. Step 10 closed out the as-of/clock discipline the earlier
-steps had already mostly built by construction: `FrozenClock` (rejects a
-naive datetime at construction), a ruff `TID251` banned-api rule banning
-`datetime.now`/`.utcnow`/`date.today`/`time.time` everywhere except
-`clock.py`, and `test_clock_discipline.py`'s own independent source-tree
-grep as a second enforcement layer — adding the rule surfaced two
-pre-existing `datetime.now(UTC)` calls in test fixtures that predated it,
-both switched to `SystemClock().now()` rather than exempted. Step 11
-started the audit chain: an append-only writer (`services/audit.py`) with
-no update/delete path in code or at the database grant level, hash-chained
-per tenant (`event_hash = sha256(canonical_json(...))`) and walked by hash
-POINTER rather than timestamp — Postgres's `now()` is constant for a whole
-transaction, so timestamp ordering can't reliably reconstruct append order
-the way a linked-list-by-hash can. The one deliberate architectural
-deviation: each audit write commits its own short-lived transaction rather
-than sharing the request's, specifically so events describing a REJECTED
-or FAILED request (`AUTH_FAILED`, `APPLICATION_REJECTED_INTAKE`) survive
-even though the request's own transaction rolls back moments later. See
-`backend/CLAUDE.md` for the concurrency (advisory-lock) story and the two
-flagged assumptions about which auth/rejection paths can actually emit an
-event at all (both need a resolvable tenant_id, which not every failure
-path has). Step 12 added CI, quality gates, and secret scanning — and
-changed HOW work lands in this repo going forward. Steps 0-11 were all
-committed directly to `main`; Step 12 adds pre-commit's
-`no-commit-to-branch` hook and asks for GitHub branch protection on
-`main`, both of which exist specifically to stop that. Rather than
-silently pick a side, this was asked outright — decided: switch to a
-PR-based workflow starting with Step 12's own changes, which shipped via a
-branch + PR instead of a direct push. `.pre-commit-config.yaml` lives at
-the repo root (one `.git`, monorepo); `.github/workflows/ci.yml` runs
-lint/typecheck, a full-history `gitleaks` scan, and a test job that spins
-up a real disposable Neon branch per run (deleted unconditionally
-afterward) to run `alembic upgrade head` and the full suite with a
-coverage gate. GitHub branch protection itself is NOT configured — no
-`gh` CLI or MCP tool for repository branch-protection settings was
-available in this session, so that half is a manual step left for the
-repo owner. See `backend/CLAUDE.md` for the ruff-hook path-resolution
-gotcha found live while wiring this up. See `phase1.txt` for the live
-checklist and what's next. No credit logic, feature engine, or LLM
-integration exists yet by design — Phase 1 is the multi-tenant API +
-schema + audit spine only.
+**Phase 1 (Foundation) is COMPLETE** — tagged `p1-foundation`, all 12 steps
+done and live-verified against real Neon (not just re-run tests): multi-
+tenant schema with Row Level Security enforced at the database (not app
+code), tenant API key auth, validated + idempotent application intake
+(`POST /v1/applications`, claim-before-work idempotency, byte-identical
+replay proven via real curl), as-of/clock discipline (`Clock` protocol +
+`FrozenClock`, ruff-enforced ban on ad hoc `datetime.now()`), an append-
+only hash-chained audit trail (tamper detection proven), and CI + pre-
+commit quality gates + secret scanning (the repo switched to a PR-based
+workflow starting at this step — direct pushes to `main` are now blocked).
+Full step-by-step history, every gotcha found live, and the exact PROVE IT
+verification for each item lives in `phase1.txt` (gitignored, local-only —
+see `backend/CLAUDE.md` for the same history in more implementation
+detail) and in the git log up to the `p1-foundation` tag. No credit logic,
+feature engine, or LLM integration exists yet — Phase 1 was deliberately
+the multi-tenant API + schema + audit spine only.
 
-Phase 1 exit checklist (2026-08-13): every item live-verified against real
-Neon, not assumed — a real curl POST with a real API key + Idempotency-Key
-created an application and replayed byte-identically; RLS, audit-chain
-(incl. tamper detection), and clock-discipline test suites all re-run
-green; `lint-and-typecheck`/`secret-scan` green on `main` (a real
-Dependabot dependency-update PR already landed through them); `test`
-(the ephemeral-Neon-branch job) is the one known-red job, deliberately —
-the owner deferred adding its Neon CI secrets. Tagged `p1-foundation`.
-`final architecture.txt` §16 captures five implementation patterns P3's
-Decision Record work should adopt from the start rather than rediscover:
-audit/ledger writes need their own transaction (not the request's, so a
-rejection/failure doesn't erase the row recording it), idempotency must
-claim before doing the work not after, `SELECT ... FOR UPDATE` needs
-UPDATE privilege an append-only role deliberately lacks (use a Postgres
-advisory lock), chain ordering must walk by hash pointer not timestamp
-(Postgres's `now()` is transaction-constant), and dev Neon runs in
-`aws-us-east-2` (confirmed, not a residency violation — the guard is
-`ENV=prod`-only).
+`final architecture.txt` §16 (added on Phase 1 exit) captures five
+implementation patterns for Phase 2/3 to adopt from the start rather than
+rediscover: audit/ledger writes need their own transaction, decoupled from
+the request they describe (a rejection/failure must not erase the row
+recording it); idempotency must claim before doing the work, not after;
+`SELECT ... FOR UPDATE` needs UPDATE privilege an append-only role
+deliberately lacks — use a Postgres advisory lock instead; chain/ledger
+ordering must walk by hash pointer, never by `recorded_at`/timestamp
+(Postgres's `now()` is constant for a whole transaction); and dev Neon
+runs in `aws-us-east-2`, confirmed not a residency violation since the
+`ENV=prod`-only guard never applied to it.
+
+**Phase 2 (synthetic cohort + deterministic feature engine) is starting.**
+Plan is in `phase2.txt` (gitignored, local-only, same checkbox/PROVE-IT
+format as `phase1.txt`) — goal: turn a `CanonicalFinancialData` object into
+a versioned, provenance-carrying `FeatureSnapshot` using formulas pinned
+exactly once (`final architecture.txt` §14.2), plus the 200-borrower
+synthetic cohort (`ankuraworkflow.txt` §7.3/§9.5 proof asset A1) generated
+FROM those formulas, seeded and committed to the repo. No policy, no
+scorecard, no routing, no LLM — the feature engine computes numbers, it
+never decides anything with them (that's Phase 3). Step 0 freezes nine
+open decisions (cohort size/mix, ratio rounding, proposed-EMI convention,
+etc.) before any implementation starts, same discipline as Phase 1 Step 0.
+See `endgoal.txt` (gitignored, local-only) for the full end-to-end product
+narrative these phases are building toward.
 
 ## Working conventions for this repo
 
