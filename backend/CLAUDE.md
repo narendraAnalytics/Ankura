@@ -148,7 +148,17 @@ head` against it, then the full suite with a coverage gate, then deletes
 the branch unconditionally. Branch protection itself is NOT configured —
 no `gh` CLI or MCP tool for it was available in this session; it's a
 manual step left for the repo owner (documented in the PR and
-`phase1.txt`). Next up is the Phase 1 exit checklist.
+`phase1.txt`). PROVE IT was verified live: a first attempt using the
+literal AWS-documentation example key (`AKIAIOSFODNN7EXAMPLE`) came back
+clean from gitleaks — not a broken hook, gitleaks' own default ruleset
+deliberately allowlists that exact string (it's pasted into thousands of
+tutorials, so scanning it would be permanent noise). A random-looking fake
+GitHub token instead correctly failed `secret-scan`. If you're ever
+testing secret-scanning yourself, don't reach for a famous textbook
+example — it may be allowlisted on purpose. `test` (the Neon-branch job)
+fails on every run so far, expected: `NEON_API_KEY`/`NEON_PROJECT_ID`/
+`CI_API_KEY_PEPPER` are deliberately not set yet, owner's call to revisit
+later. Next up is the Phase 1 exit checklist.
 
 ## Source of truth for architecture
 
