@@ -68,8 +68,24 @@ occupies its `(tenant_id, key)` slot and is still replayed if found — only
 `purge_expired()` (deliberately not wired to a scheduler; Cloud Tasks is
 out of scope for Phase 1) actually frees a key for reuse. Full suite
 121/121 passing live against Neon (including the 8-way concurrent-request
-race, re-run standalone 9x with no failures), ruff clean, mypy clean. Next
-up is Step 10 (as-of time discipline / `FrozenClock`).
+race, re-run standalone 9x with no failures), ruff clean, mypy clean. Step
+10 (as-of time discipline) is also done — most of it already existed by
+construction from Step 8 (Clock protocol/dependency, as_of accept-or-stamp,
+as_of vs. `received_at`, every DateTime column already tz-aware). What Step
+10 actually added: `FrozenClock` (rejects a naive datetime at construction),
+a ruff `TID251` banned-api rule
+(`[tool.ruff.lint.flake8-tidy-imports.banned-api]`, pyproject.toml) banning
+`datetime.now`/`.utcnow`/`date.today`/`time.time` repo-wide with a
+per-file-ignore for `clock.py`, and `test_clock_discipline.py`'s own
+independent source-tree grep as a second enforcement layer. Adding the rule
+surfaced two pre-existing `datetime.now(UTC)` calls in test fixtures
+(`test_tenant_isolation.py`, `test_idempotency.py`) that predated it — both
+switched to `SystemClock().now()` rather than carving tests out of the ban,
+since the checklist's own wording ("anywhere outside clock.py") didn't
+carve out an exception either. `FrozenClock` reaches request handling via
+FastAPI's own `app.dependency_overrides[get_clock]`, not a monkeypatch.
+Full suite 125/125 passing live against Neon, ruff clean (including the new
+rule), mypy clean. Next up is Step 11 (audit events skeleton / hash chain).
 
 ## Source of truth for architecture
 

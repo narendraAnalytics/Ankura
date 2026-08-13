@@ -74,7 +74,7 @@ not silently violate them while "just getting something working."
 
 ## Current status
 
-Phase 1 (Foundation) is in progress. Steps 0-9 done: open decisions frozen,
+Phase 1 (Foundation) is in progress. Steps 0-10 done: open decisions frozen,
 package skeleton, dependencies, fail-fast config, a live async DB engine
 against Neon (connecting as a dedicated non-owner role, `ankura_app`, never
 the schema owner), the canonical contracts (PAN/GSTIN/Udyam validators —
@@ -102,10 +102,9 @@ request_id}}` envelope for every rejection, and `POST`/`GET
 /v1/applications` with keyset (cursor) pagination and an atomic
 `INSERT ... ON CONFLICT DO UPDATE` borrower upsert (never SELECT-then-
 INSERT, which would race). Building it required pulling two things forward
-out of their own later steps: a minimal `Clock` protocol + `SystemClock`
-(Step 10 still owns `FrozenClock` and the banned-`datetime.now()` grep
-test), and a new `security.py` module for the key hashing. Step 9 made
-POST /v1/applications idempotent: `Idempotency-Key` is required (missing →
+out of their own later steps: a minimal `Clock` protocol + `SystemClock`,
+and a new `security.py` module for the key hashing. Step 9 made POST
+/v1/applications idempotent: `Idempotency-Key` is required (missing →
 400), and the request is served by claiming `(tenant_id, key)` with a
 placeholder row *before* the underlying work runs, then finalizing it with
 the real response afterward, all inside one SAVEPOINT nested in the
@@ -114,9 +113,17 @@ makes two truly concurrent identical requests block on the idempotency
 table's own unique index instead of racing each other straight into
 `applications`' own unique constraints. See `backend/CLAUDE.md` for the
 concurrency-bug story and the JSONB key-ordering fix that byte-identical
-replay needed. See `phase1.txt` for the live checklist and what's next. No
-credit logic, feature engine, or LLM integration exists yet by design —
-Phase 1 is the multi-tenant API + schema + audit spine only.
+replay needed. Step 10 closed out the as-of/clock discipline the earlier
+steps had already mostly built by construction: `FrozenClock` (rejects a
+naive datetime at construction), a ruff `TID251` banned-api rule banning
+`datetime.now`/`.utcnow`/`date.today`/`time.time` everywhere except
+`clock.py`, and `test_clock_discipline.py`'s own independent source-tree
+grep as a second enforcement layer — adding the rule surfaced two
+pre-existing `datetime.now(UTC)` calls in test fixtures that predated it,
+both switched to `SystemClock().now()` rather than exempted. See
+`phase1.txt` for the live checklist and what's next. No credit logic,
+feature engine, or LLM integration exists yet by design — Phase 1 is the
+multi-tenant API + schema + audit spine only.
 
 ## Working conventions for this repo
 

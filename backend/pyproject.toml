@@ -55,7 +55,7 @@ target-version = "py312"
 src = ["src", "tests"]
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B", "SIM", "N"]
+select = ["E", "F", "I", "UP", "B", "SIM", "N", "TID"]
 
 [tool.ruff.lint.flake8-bugbear]
 # FastAPI's Depends()/Query()/Header() in argument defaults is the
@@ -63,6 +63,19 @@ select = ["E", "F", "I", "UP", "B", "SIM", "N"]
 # to catch — FastAPI evaluates these once at route-registration time, not
 # per-call.
 extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Header"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+# Clock discipline (phase1.txt Step 10): every business timestamp must
+# come from ankura.clock.Clock so it can be frozen in tests and replayed
+# exactly in P3. clock.py itself is exempted below — it's the one place
+# `datetime.now()` is allowed to exist.
+"datetime.datetime.now".msg = "Use ankura.clock.Clock (get_clock()), not datetime.now() — see phase1.txt Step 10"
+"datetime.datetime.utcnow".msg = "Use ankura.clock.Clock (get_clock()), not datetime.utcnow() — see phase1.txt Step 10"
+"datetime.date.today".msg = "Use ankura.clock.Clock (get_clock()), not date.today() — see phase1.txt Step 10"
+"time.time".msg = "Use ankura.clock.Clock (get_clock()), not time.time() — see phase1.txt Step 10"
+
+[tool.ruff.lint.per-file-ignores]
+"src/ankura/clock.py" = ["TID251"]
 
 [tool.mypy]
 python_version = "3.12"

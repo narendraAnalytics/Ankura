@@ -23,12 +23,12 @@ services/, re-verify by literally removing it, per the original wording.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from ankura.clock import SystemClock
 from ankura.config import get_settings
 from ankura.db.engine import async_session_factory, set_tenant_context
 from ankura.db.models import Application, Borrower, Tenant
@@ -110,7 +110,7 @@ async def _create_application(tenant_id: uuid.UUID) -> uuid.UUID:
                 tenure_months=18,
                 purpose="INVENTORY_PURCHASE",
                 status="RECEIVED",
-                as_of=datetime.now(UTC),
+                as_of=SystemClock().now(),
             )
         )
     return application_id

@@ -10,13 +10,14 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import timedelta
 from typing import Any
 
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from ankura.clock import FrozenClock, SystemClock
 from ankura.config import get_settings
 from ankura.db.models import Application, IdempotencyKey
 from ankura.main import app
@@ -141,19 +142,11 @@ async def test_concurrent_identical_requests_create_exactly_one_application(
     assert await _count_applications(tenant_id) == 1
 
 
-class _FixedClock:
-    def __init__(self, when: datetime) -> None:
-        self._when = when
-
-    def now(self) -> datetime:
-        return self._when
-
-
 async def test_purge_expired_deletes_only_keys_past_their_ttl(
     tenant_with_api_key: tuple[uuid.UUID, str],
 ) -> None:
     tenant_id, _ = tenant_with_api_key
-    now = datetime.now(UTC)
+    now = SystemClock().now()
 
     async with _owner_session_factory() as session, session.begin():
         session.add_all(
@@ -180,7 +173,7 @@ async def test_purge_expired_deletes_only_keys_past_their_ttl(
         )
 
     async with _owner_session_factory() as session, session.begin():
-        deleted = await idempotency_service.purge_expired(session, _FixedClock(now))
+        deleted = await idempotency_service.purge_expired(session, FrozenClock(now))
 
     assert deleted == 1
     async with _owner_session_factory() as session:
