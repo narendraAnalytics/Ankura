@@ -5,14 +5,20 @@ stack conventions, patterns, and gotchas that apply while writing code here.
 
 ## Current status
 
-Phase 1 Steps 0-3 done: open decisions frozen, `src/ankura` package skeleton
+Phase 1 Steps 0-4 done: open decisions frozen, `src/ankura` package skeleton
 created and verified (`import ankura` succeeds, `uv run pytest`/`ruff`/`mypy`
 all clean), dependencies finalized — `psycopg[binary,pool]`, dev deps
 (`pytest-cov`, `pytest-env`, `types-python-dateutil`) added, `uv sync
---frozen` proven from a deleted-and-rebuilt `.venv` — and `config.py` now
-enforces fail-fast settings (14 tests in `tests/test_config.py`), backed by
-a live Neon "ankura" project with connection pooling intentionally off.
-Next up is Step 4 (database connection) — see `../phase1.txt`.
+--frozen` proven from a deleted-and-rebuilt `.venv` — `config.py` enforces
+fail-fast settings (14 tests), and `db/engine.py` has a live async engine
+against Neon's "ankura" project: connects as `ankura_app` (dedicated
+non-owner role, `NOSUPERUSER`/`NOBYPASSRLS`/etc., created via Neon MCP and
+verified against `pg_roles`), `get_db_session()` gives one transaction per
+request, and `set_tenant_context()` is the RLS hook Step 6 will call — 9
+engine tests pass live against Neon, including one proving tenant context
+never leaks between sessions. Connection pooling is intentionally off
+(owner decision); `prepare_threshold=None` stays set defensively regardless.
+Next up is Step 5 (canonical contracts) — see `../phase1.txt`.
 
 ## Source of truth for architecture
 
@@ -47,7 +53,7 @@ purpose — do not import them before their phase arrives.
 
 Skeleton created Phase 1 Step 1 (2026-08-13). Most non-`__init__.py`
 modules are still docstring-only stubs naming the step that fills them in —
-`config.py` is the first one actually implemented (Step 3). Check a
+`config.py` (Step 3) and `db/engine.py` (Step 4) are implemented. Check a
 module's docstring before assuming it's unimplemented vs. just
 not-yet-reached.
 
@@ -59,7 +65,8 @@ backend/
                          residency guard, assert_expected_db_role()
     clock.py             THE ONLY source of current time — Step 10
     db/
-      engine.py           async engine/session, RLS session hook — Step 4
+      engine.py           IMPLEMENTED (Step 4) — async engine (ankura_app,
+                           not owner), get_db_session(), set_tenant_context()
       base.py               DeclarativeBase, shared mixins — Step 6
       models/               tenant, borrower, application, audit,
                              idempotency, api_key — Step 6

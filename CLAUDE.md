@@ -74,13 +74,16 @@ not silently violate them while "just getting something working."
 
 ## Current status
 
-Phase 1 (Foundation) is in progress. Steps 0-3 done: open decisions frozen,
+Phase 1 (Foundation) is in progress. Steps 0-4 done: open decisions frozen,
 `src/ankura` package skeleton created (every module a stub naming the step
 that implements it), dependencies finalized (`psycopg[binary,pool]`,
-dev-dep additions, `uv sync --frozen` proven from a clean `.venv`), and
-`config.py` now enforces fail-fast settings — a Neon "ankura" project is
-live (pooling intentionally off) with `DATABASE_URL`/`DATABASE_DIRECT_URL`
-in a gitignored `backend/.env`. See `phase1.txt` for the live checklist and
+dev-dep additions, `uv sync --frozen` proven from a clean `.venv`),
+`config.py` enforces fail-fast settings, and `db/engine.py` now has a live
+async engine against Neon — connecting as a dedicated non-owner role
+(`ankura_app`, verified via `pg_roles` to have every dangerous flag off)
+rather than the schema owner, with a working RLS tenant-context hook
+(`set_tenant_context`, verified live to be transaction-scoped and non-
+leaking). See `phase1.txt` for the live checklist and
 what's next. No credit logic, feature engine, or LLM integration exists yet
 by design — Phase 1 is the
 multi-tenant API + schema + audit spine only.
