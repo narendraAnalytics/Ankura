@@ -119,10 +119,15 @@ etc.), Step 1 (`backend/src/ankura/features/metrics.py` — all seven
 §14.2 metrics, pure functions, hand-computed tests), Step 2 (grew
 `CanonicalFinancialData`, defined `FeatureSnapshot`), and Step 3
 (`backend/src/ankura/cohort/archetypes.py` — all nine D2 archetypes as
-declarative specs with range/direction expected feature signatures, no
-generator yet) are done. See `backend/CLAUDE.md` for implementation-level
-detail and `endgoal.txt` (gitignored, local-only) for the full end-to-end
-product narrative these phases are building toward.
+declarative specs with range/direction expected feature signatures), and
+Step 4 (`backend/src/ankura/cohort/generator.py` — the deterministic,
+seeded generator that turns each archetype spec into a real
+`CanonicalFinancialData`, values solved backward from the pinned §14.2
+formulas rather than hand-typed, verified byte-identical across both
+same-process and cross-process regeneration) are done. See
+`backend/CLAUDE.md` for implementation-level detail and `endgoal.txt`
+(gitignored, local-only) for the full end-to-end product narrative these
+phases are building toward.
 
 ## Working conventions for this repo
 

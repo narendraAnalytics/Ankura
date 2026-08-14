@@ -245,7 +245,56 @@ archetypes with separate stories, so `new_to_credit` keeps a
 shorter-than-healthy-but-not-thin_file-short coverage band and exercises
 a *different* Step 1 discipline (measured zero, not undefined) — see the
 ASSUMPTION FLAGGED note in `archetypes.py`'s `new_to_credit` docstring
-and in `phase2.txt` Step 3. Load-bearing constraint carried forward from
+and in `phase2.txt` Step 3. Step 4 (the deterministic, seeded generator)
+is also done: `cohort/generator.py`'s `generate_cohort(as_of)` /
+`generate_borrower(index, archetype, as_of)` turn each `ArchetypeSpec`
+into a real `CanonicalFinancialData` instance. Determinism is the one seam
+this module cares most about — `MASTER_SEED` plus `_borrower_seed()`
+derives every per-borrower seed via `hashlib.sha256(f"{master_seed}:
+{index}")` (NEVER Python's built-in `hash()`, which `PYTHONHASHSEED`
+salts per-process), and every draw goes through an explicit
+`random.Random(seed)` instance, never the module-level `random.*`
+functions — verified live: the full 200-borrower cohort regenerated twice
+in the same process AND in two separate `python -c` subprocesses (compared
+by SHA-256 digest of the concatenated JSON) came back byte-identical both
+ways. Values are genuinely SOLVED from `features.metrics`'s formulas, not
+hand-typed: for each borrower, a target ratio is picked from the
+archetype's `GenerationParams`/`expected_features` range, then the
+underlying aggregate (e.g. `existing_emi_outflow` from a target
+`obligation_ratio`, `gst_turnover` from a target `bank_gst_gap`) is solved
+backward from the pinned formula and used to build the actual
+`BankTransaction` list — verified empirically by running all 200
+borrowers' generated transactions back FORWARD through the real
+`features.metrics.*` functions and checking every result against its own
+archetype's `expected_features` (`test_generator.py::
+test_full_cohort_matches_expected_signatures`); 0/200 mismatches after two
+real bugs were found and fixed live in this step: (1) `bounce_ratio`'s
+per-month instrument/bounce split used floor division, which silently
+dropped small `bounced_instruments` targets (e.g. 3 across 10 months) to 0
+per month and lost them entirely — replaced with `_distribute_evenly()`,
+which puts the remainder on the first N buckets so the total across months
+is always exact, never floor-truncated away; (2) even an exact `round()`
+of a small instrument count can land the REALIZED ratio just outside a
+tight archetype band (1 bounce / 33 instruments = 0.0303 > a 0.03
+ceiling) — fixed by nudging the bounced count by the minimum amount needed
+to land back inside `GenerationParams.bounce_rate`, since the archetype's
+declared band is authoritative, not the single point-target that was
+picked from it. A related convention pinned here for Step 6 to honor:
+`bounce_ratio`'s presented-instrument count is NON-EMI debit transactions
+only (EMI is an auto-debit mandate with its own signal via
+`obligation_ratio`/`dscr`, not a presented cheque). One ambiguity flagged
+rather than silently resolved (documented in `generator.py`'s own module
+docstring): §14.2 says `dscr`'s `total_debt_service` includes the proposed
+EMI, but proposed EMI needs a requested amount/tenure that lives on
+`ApplicationIn`/`Out` (Phase 1), not on `CanonicalFinancialData` — this
+generator has no associated application, so it derives each archetype's
+target dscr from EXISTING debt service only, leaving the proposed-EMI
+addition to Step 6's `compute_features()` once that function's real
+signature exists. The circular-transactions archetype's ring uses a
+deliberately adversarial-looking narration string (the P5 prompt-injection
+test vector Step 4 promises exists in real test data, per §7.3 E6) — P2
+does not defend against it, only makes sure the vector is there for P5 to
+test against later. Load-bearing constraint carried forward from
 Phase 1: the feature engine computes numbers, it never decides anything
 with them — a threshold comparison or routing decision anywhere in
 `features/` means Phase 3 scope has leaked backward. `final
@@ -334,7 +383,11 @@ backend/
     cohort/
       archetypes.py           IMPLEMENTED (Phase 2 Step 3) — 9 D2
                             archetype specs (ArchetypeSpec/GenerationParams/
-                            FeatureExpectation), no generator yet (Step 4)
+                            FeatureExpectation)
+      generator.py             IMPLEMENTED (Phase 2 Step 4) — deterministic,
+                            seeded CanonicalFinancialData generator;
+                            solves aggregates from features.metrics
+                            formulas, never hand-typed
     api/
       deps.py               IMPLEMENTED (Step 8) — get_current_tenant():
                            Bearer key -> peppered hash lookup ->
