@@ -1,6 +1,6 @@
 {
   "application_id": "b91a0449-8563-5203-8085-bac60969efa5",
-  "borrower_pan": "QTGPX7434V",
+  "borrower_pan": "TGHCP4341Y",
   "bank_accounts": [
     {
       "account_id": "acc-synthetic-0184",
@@ -979,7 +979,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-22",
+          "transaction_date": "2026-08-11",
           "transaction_type": "CREDIT",
           "description": "CASH DEPOSIT - BRANCH",
           "amount_paise": 2592610,
@@ -990,7 +990,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-24",
+          "transaction_date": "2026-08-12",
           "transaction_type": "CREDIT",
           "description": "IMPS CR TOPCUST ADVANCE",
           "amount_paise": 6029270,
@@ -1001,9 +1001,9 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-10",
+          "transaction_date": "2026-08-01",
           "transaction_type": "CREDIT",
-          "description": "NEFT CR-CUSTOMER-3 INV SETTLEMENT",
+          "description": "UPI CR CUSTOMER-3 ORDER PAYMENT",
           "amount_paise": 10363762,
           "balance_after_paise": null,
           "bounced": false,
@@ -1012,7 +1012,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-30",
+          "transaction_date": "2026-08-05",
           "transaction_type": "CREDIT",
           "description": "RTGS CR CUSTOMER-4 SUPPLY PAYMENT",
           "amount_paise": 10363761,
@@ -1023,9 +1023,9 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-31",
+          "transaction_date": "2026-08-06",
           "transaction_type": "CREDIT",
-          "description": "UPI CR CUSTOMER-0 ORDER PAYMENT",
+          "description": "NEFT CR-CUSTOMER-0 INV SETTLEMENT",
           "amount_paise": 10363761,
           "balance_after_paise": null,
           "bounced": false,
@@ -1034,7 +1034,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-09",
+          "transaction_date": "2026-08-02",
           "transaction_type": "DEBIT",
           "description": "ACH DR EMI-EXISTING LOAN LENDER-EXISTING",
           "amount_paise": 11207007,
@@ -1045,7 +1045,7 @@
           "is_debt_service": true
         },
         {
-          "transaction_date": "2026-08-04",
+          "transaction_date": "2026-08-07",
           "transaction_type": "DEBIT",
           "description": "NEFT DR-SUPPLIER-TOP PURCHASE ORDER",
           "amount_paise": 8137019,
@@ -1056,9 +1056,9 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-02",
+          "transaction_date": "2026-08-01",
           "transaction_type": "DEBIT",
-          "description": "RTGS DR SUPPLIER-3 RAW MATERIAL",
+          "description": "UPI DR SUPPLIER-3 VENDOR PAYMENT",
           "amount_paise": 3109592,
           "balance_after_paise": null,
           "bounced": false,
@@ -1067,7 +1067,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-05",
+          "transaction_date": "2026-08-04",
           "transaction_type": "DEBIT",
           "description": "NEFT DR-SUPPLIER-4 PURCHASE ORDER",
           "amount_paise": 3109592,
@@ -1078,7 +1078,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-13",
+          "transaction_date": "2026-08-11",
           "transaction_type": "DEBIT",
           "description": "UPI DR SUPPLIER-0 VENDOR PAYMENT",
           "amount_paise": 3109591,
@@ -1089,9 +1089,9 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-21",
+          "transaction_date": "2026-08-12",
           "transaction_type": "DEBIT",
-          "description": "NEFT DR-SUPPLIER-1 PURCHASE ORDER",
+          "description": "UPI DR SUPPLIER-1 VENDOR PAYMENT",
           "amount_paise": 3109591,
           "balance_after_paise": null,
           "bounced": false,
@@ -1100,7 +1100,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-26",
+          "transaction_date": "2026-08-13",
           "transaction_type": "DEBIT",
           "description": "UPI DR SUPPLIER-2 VENDOR PAYMENT",
           "amount_paise": 3109591,
@@ -1117,49 +1117,49 @@
     {
       "return_type": "GSTR_3B",
       "period": "2025-12",
-      "filed_on": "2026-01-13",
+      "filed_on": "2026-01-19",
       "turnover_paise": 36445729,
       "tax_paid_paise": null
     },
     {
       "return_type": "GSTR_3B",
       "period": "2026-01",
-      "filed_on": "2026-02-16",
+      "filed_on": "2026-02-17",
       "turnover_paise": 36445729,
       "tax_paid_paise": null
     },
     {
       "return_type": "GSTR_3B",
       "period": "2026-02",
-      "filed_on": "2026-03-19",
+      "filed_on": "2026-03-03",
       "turnover_paise": 36445729,
       "tax_paid_paise": null
     },
     {
       "return_type": "GSTR_3B",
       "period": "2026-03",
-      "filed_on": "2026-04-17",
+      "filed_on": "2026-04-04",
       "turnover_paise": 36445729,
       "tax_paid_paise": null
     },
     {
       "return_type": "GSTR_3B",
       "period": "2026-04",
-      "filed_on": "2026-05-03",
+      "filed_on": "2026-05-12",
       "turnover_paise": 36445729,
       "tax_paid_paise": null
     },
     {
       "return_type": "GSTR_3B",
       "period": "2026-05",
-      "filed_on": "2026-06-04",
+      "filed_on": "2026-06-09",
       "turnover_paise": 36445729,
       "tax_paid_paise": null
     },
     {
       "return_type": "GSTR_3B",
       "period": "2026-06",
-      "filed_on": "2026-07-12",
+      "filed_on": "2026-07-02",
       "turnover_paise": 36445729,
       "tax_paid_paise": null
     },
@@ -1173,7 +1173,7 @@
     {
       "return_type": "GSTR_3B",
       "period": "2026-08",
-      "filed_on": "2026-09-02",
+      "filed_on": "2026-09-07",
       "turnover_paise": 36445731,
       "tax_paid_paise": null
     }
@@ -1182,7 +1182,7 @@
   "data_quality": {
     "coverage_months": 9,
     "source_count": 2,
-    "confidence": 0.6527
+    "confidence": 0.7793
   },
   "as_of": "2026-08-13T00:00:00Z"
 }

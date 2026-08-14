@@ -124,15 +124,25 @@ Step 4 (`backend/src/ankura/cohort/generator.py` — the deterministic,
 seeded generator that turns each archetype spec into a real
 `CanonicalFinancialData`, values solved backward from the pinned §14.2
 formulas rather than hand-typed, verified byte-identical across both
-same-process and cross-process regeneration), and Step 5 (the 200-borrower
+same-process and cross-process regeneration), Step 5 (the 200-borrower
 cohort — proof asset A1 — generated and committed to
 `backend/src/ankura/cohort/data/`, one JSON file per borrower plus a
 manifest with a checksum over the whole set, regenerable via
 `uv run python -m ankura.cohort.generate`, with a drift test keeping the
-committed files and the generator from silently diverging) are done. See
-`backend/CLAUDE.md` for implementation-level detail and `endgoal.txt`
-(gitignored, local-only) for the full end-to-end product narrative these
-phases are building toward.
+committed files and the generator from silently diverging), and Step 6
+(`backend/src/ankura/features/engine.py` — `compute_features()`, this
+phase's centrepiece: windows a `CanonicalFinancialData` to a trailing
+12 months relative to `as_of`, aggregates it, and calls the pinned
+metric formulas, with no thresholds/bands/decisions anywhere in it;
+proven replayable byte-for-byte, and all 200 committed cohort borrowers
+verified against their own archetype's expected signature through this
+real engine) are done. A real bug was found and fixed while wiring Step 6
+up: the generator could date a transaction after `as_of`, which the
+engine's correct as_of-cutoff windowing then silently excluded while the
+generator's own totals had counted it — fixed in the generator, cohort
+regenerated. See `backend/CLAUDE.md` for implementation-level detail and
+`endgoal.txt` (gitignored, local-only) for the full end-to-end product
+narrative these phases are building toward.
 
 ## Working conventions for this repo
 

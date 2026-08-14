@@ -1,6 +1,6 @@
 {
   "application_id": "8d5e4ad3-a789-503e-9712-d24dabf91248",
-  "borrower_pan": "IPHCB6279L",
+  "borrower_pan": "PHXPW6279L",
   "bank_accounts": [
     {
       "account_id": "acc-synthetic-0028",
@@ -1078,7 +1078,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-30",
+          "transaction_date": "2026-08-12",
           "transaction_type": "CREDIT",
           "description": "CASH DEPOSIT - BRANCH",
           "amount_paise": 8985608,
@@ -1089,7 +1089,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-14",
+          "transaction_date": "2026-08-07",
           "transaction_type": "CREDIT",
           "description": "RTGS CR TOPCUST SUPPLY PAYMENT",
           "amount_paise": 30190510,
@@ -1100,7 +1100,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-12",
+          "transaction_date": "2026-08-06",
           "transaction_type": "CREDIT",
           "description": "IMPS CR CUSTOMER-1 ADVANCE",
           "amount_paise": 30042726,
@@ -1111,7 +1111,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-29",
+          "transaction_date": "2026-08-11",
           "transaction_type": "CREDIT",
           "description": "NEFT CR-CUSTOMER-2 INV SETTLEMENT",
           "amount_paise": 30042725,
@@ -1122,7 +1122,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-22",
+          "transaction_date": "2026-08-11",
           "transaction_type": "DEBIT",
           "description": "ACH DR EMI-EXISTING LOAN LENDER-EXISTING",
           "amount_paise": 10843291,
@@ -1133,7 +1133,7 @@
           "is_debt_service": true
         },
         {
-          "transaction_date": "2026-08-24",
+          "transaction_date": "2026-08-12",
           "transaction_type": "DEBIT",
           "description": "UPI DR SUPPLIER-TOP VENDOR PAYMENT",
           "amount_paise": 3923505,
@@ -1144,7 +1144,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-24",
+          "transaction_date": "2026-08-08",
           "transaction_type": "DEBIT",
           "description": "UPI DR SUPPLIER-1 VENDOR PAYMENT",
           "amount_paise": 16755577,
@@ -1155,9 +1155,9 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-26",
+          "transaction_date": "2026-08-12",
           "transaction_type": "DEBIT",
-          "description": "UPI DR SUPPLIER-2 VENDOR PAYMENT",
+          "description": "RTGS DR SUPPLIER-2 RAW MATERIAL",
           "amount_paise": 16755577,
           "balance_after_paise": null,
           "bounced": false,
@@ -1166,7 +1166,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-27",
+          "transaction_date": "2026-08-13",
           "transaction_type": "DEBIT",
           "description": "RTGS DR SUPPLIER-3 RAW MATERIAL",
           "amount_paise": 16755576,
@@ -1183,91 +1183,91 @@
     {
       "return_type": "GSTR_3B",
       "period": "2025-09",
-      "filed_on": "2025-10-18",
+      "filed_on": "2025-10-02",
       "turnover_paise": 78606702,
       "tax_paid_paise": null
     },
     {
       "return_type": "GSTR_3B",
       "period": "2025-10",
-      "filed_on": "2025-11-02",
+      "filed_on": "2025-11-13",
       "turnover_paise": 78606702,
       "tax_paid_paise": null
     },
     {
       "return_type": "GSTR_3B",
       "period": "2025-11",
-      "filed_on": "2025-12-13",
+      "filed_on": "2025-12-10",
       "turnover_paise": 78606702,
       "tax_paid_paise": null
     },
     {
       "return_type": "GSTR_3B",
       "period": "2025-12",
-      "filed_on": "2026-01-10",
+      "filed_on": "2026-01-13",
       "turnover_paise": 78606702,
       "tax_paid_paise": null
     },
     {
       "return_type": "GSTR_3B",
       "period": "2026-01",
-      "filed_on": "2026-02-13",
+      "filed_on": "2026-02-02",
       "turnover_paise": 78606702,
       "tax_paid_paise": null
     },
     {
       "return_type": "GSTR_3B",
       "period": "2026-02",
-      "filed_on": "2026-03-02",
+      "filed_on": "2026-03-07",
       "turnover_paise": 78606702,
       "tax_paid_paise": null
     },
     {
       "return_type": "GSTR_3B",
       "period": "2026-03",
-      "filed_on": "2026-04-07",
+      "filed_on": "2026-04-04",
       "turnover_paise": 78606702,
       "tax_paid_paise": null
     },
     {
       "return_type": "GSTR_3B",
       "period": "2026-04",
-      "filed_on": "2026-05-04",
+      "filed_on": "2026-05-12",
       "turnover_paise": 78606702,
       "tax_paid_paise": null
     },
     {
       "return_type": "GSTR_3B",
       "period": "2026-05",
-      "filed_on": "2026-06-12",
+      "filed_on": "2026-06-09",
       "turnover_paise": 78606702,
       "tax_paid_paise": null
     },
     {
       "return_type": "GSTR_3B",
       "period": "2026-06",
-      "filed_on": "2026-07-09",
+      "filed_on": "2026-07-01",
       "turnover_paise": 78606702,
       "tax_paid_paise": null
     },
     {
       "return_type": "GSTR_3B",
       "period": "2026-07",
-      "filed_on": "2026-08-01",
+      "filed_on": "2026-08-19",
       "turnover_paise": 78606702,
       "tax_paid_paise": null
     },
     {
       "return_type": "GSTR_3B",
       "period": "2026-08",
-      "filed_on": "2026-09-19",
+      "filed_on": "2026-09-11",
       "turnover_paise": 78606711,
       "tax_paid_paise": null
     }
   ],
   "bureau": {
     "bureau_name": "Synthetic CIBIL MSME Rank",
-    "score": 640,
+    "score": 516,
     "report_date": "2026-08-13",
     "existing_obligations_paise": 130119492,
     "enquiries_last_6_months": 4
@@ -1275,7 +1275,7 @@
   "data_quality": {
     "coverage_months": 12,
     "source_count": 3,
-    "confidence": 0.8818
+    "confidence": 0.8908
   },
   "as_of": "2026-08-13T00:00:00Z"
 }

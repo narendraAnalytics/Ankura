@@ -1,6 +1,6 @@
 {
   "application_id": "9d46cfaf-861f-542f-8cab-b5eb9c1e4f6d",
-  "borrower_pan": "WWJPR7222W",
+  "borrower_pan": "WJDCP2229F",
   "bank_accounts": [
     {
       "account_id": "acc-synthetic-0116",
@@ -77,7 +77,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-27",
+          "transaction_date": "2026-08-12",
           "transaction_type": "CREDIT",
           "description": "CASH DEPOSIT - BRANCH",
           "amount_paise": 36430297,
@@ -99,7 +99,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-12",
+          "transaction_date": "2026-08-06",
           "transaction_type": "DEBIT",
           "description": "ACH DR EMI-EXISTING LOAN LENDER-EXISTING",
           "amount_paise": 12201413,
@@ -110,7 +110,7 @@
           "is_debt_service": true
         },
         {
-          "transaction_date": "2026-08-30",
+          "transaction_date": "2026-08-02",
           "transaction_type": "DEBIT",
           "description": "NEFT DR-SUPPLIER-TOP PURCHASE ORDER",
           "amount_paise": 22052250,
@@ -121,9 +121,9 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-03",
+          "transaction_date": "2026-08-01",
           "transaction_type": "DEBIT",
-          "description": "NEFT DR-SUPPLIER-1 PURCHASE ORDER",
+          "description": "UPI DR SUPPLIER-1 VENDOR PAYMENT",
           "amount_paise": 20525529,
           "balance_after_paise": null,
           "bounced": false,
@@ -132,9 +132,9 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-03",
+          "transaction_date": "2026-08-02",
           "transaction_type": "DEBIT",
-          "description": "UPI DR SUPPLIER-2 VENDOR PAYMENT",
+          "description": "RTGS DR SUPPLIER-2 RAW MATERIAL",
           "amount_paise": 20525528,
           "balance_after_paise": null,
           "bounced": false,
@@ -150,7 +150,7 @@
   "data_quality": {
     "coverage_months": 2,
     "source_count": 1,
-    "confidence": 0.2911
+    "confidence": 0.1749
   },
   "as_of": "2026-08-13T00:00:00Z"
 }

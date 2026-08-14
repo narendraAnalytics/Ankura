@@ -1254,7 +1254,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-22",
+          "transaction_date": "2026-08-11",
           "transaction_type": "CREDIT",
           "description": "CASH DEPOSIT - BRANCH",
           "amount_paise": 7096259,
@@ -1265,7 +1265,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-08",
+          "transaction_date": "2026-08-04",
           "transaction_type": "CREDIT",
           "description": "UPI CR TOPCUST ORDER PAYMENT",
           "amount_paise": 24980645,
@@ -1276,7 +1276,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-20",
+          "transaction_date": "2026-08-10",
           "transaction_type": "CREDIT",
           "description": "RTGS CR CUSTOMER-0 SUPPLY PAYMENT",
           "amount_paise": 28407948,
@@ -1287,7 +1287,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-26",
+          "transaction_date": "2026-08-13",
           "transaction_type": "CREDIT",
           "description": "NEFT CR-CUSTOMER-1 INV SETTLEMENT",
           "amount_paise": 28407947,
@@ -1298,7 +1298,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-13",
+          "transaction_date": "2026-08-07",
           "transaction_type": "DEBIT",
           "description": "ACH DR EMI-EXISTING LOAN LENDER-EXISTING",
           "amount_paise": 12263889,
@@ -1309,7 +1309,7 @@
           "is_debt_service": true
         },
         {
-          "transaction_date": "2026-08-10",
+          "transaction_date": "2026-08-05",
           "transaction_type": "DEBIT",
           "description": "RTGS DR SUPPLIER-TOP RAW MATERIAL",
           "amount_paise": 4420185,
@@ -1320,7 +1320,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-07",
+          "transaction_date": "2026-08-04",
           "transaction_type": "DEBIT",
           "description": "UPI DR SUPPLIER-0 VENDOR PAYMENT",
           "amount_paise": 7641314,
@@ -1331,7 +1331,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-17",
+          "transaction_date": "2026-08-09",
           "transaction_type": "DEBIT",
           "description": "NEFT DR-SUPPLIER-1 PURCHASE ORDER",
           "amount_paise": 7641314,
@@ -1342,7 +1342,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-18",
+          "transaction_date": "2026-08-09",
           "transaction_type": "DEBIT",
           "description": "UPI DR SUPPLIER-2 VENDOR PAYMENT",
           "amount_paise": 7641314,
@@ -1353,7 +1353,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-21",
+          "transaction_date": "2026-08-11",
           "transaction_type": "DEBIT",
           "description": "UPI DR SUPPLIER-3 VENDOR PAYMENT",
           "amount_paise": 7641314,
@@ -1364,7 +1364,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-31",
+          "transaction_date": "2026-08-13",
           "transaction_type": "DEBIT",
           "description": "NEFT DR-SUPPLIER-4 PURCHASE ORDER",
           "amount_paise": 7641313,

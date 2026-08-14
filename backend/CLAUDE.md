@@ -316,7 +316,35 @@ diffing 200 files by hand. Regenerate via
 and in `cohort/data/README.md` (written for a credit head — the cohort is
 a sales artefact per §9.5 A1, not test scaffolding). PROVE IT verified
 live: running the CLI again immediately after committing produced a clean
-`git status`. Load-bearing constraint carried forward from
+`git status`. Step 6 (the feature engine, this phase's centrepiece) is
+also done: `features/engine.py`'s `compute_features(canonical_data, as_of,
+clock) -> FeatureSnapshot` windows to a trailing `WINDOW_MONTHS=12`
+relative to `as_of` (`_trailing_window()`), aggregates via `_aggregate()`
+(its own tested `_Aggregates` dataclass, not inline math), and calls
+`features.metrics` for every ratio — no formula lives in this module.
+`clock` is used for exactly one thing, stamping `computed_at`; every other
+computation is relative to the explicit `as_of`, never the clock, which
+is what makes `compute_features()` replayable byte-for-byte (verified: two
+`FrozenClock`s at different instants produce snapshots identical in every
+field except `computed_at`, `input_hash` included). A real bug was found
+and fixed live wiring this up against the Step 5 committed cohort: the
+generator placed transactions anywhere within their month, including AFTER
+`as_of`'s own day-of-month in the final window month — nonsensical for
+real provider data and silently invisible to this engine's correct
+as_of-cutoff windowing, which excluded those transactions while the
+generator's own aggregate math had counted them in. Fixed in
+`generator.py`'s `_month_dates()` (caps the day range at `as_of.day` in
+`as_of`'s own calendar month); `GENERATOR_VERSION` bumped to 1.1.0 and the
+committed cohort regenerated (drift test + a clean `git status` both
+reconfirmed). `data_quality.confidence` here is explicitly a MINIMUM
+VIABLE formula (coverage/source-count weighted average, documented
+provisional in the module docstring) — Step 7 owns finalizing, testing,
+and pinning the real version into §14.2, including penalizing undefined-
+metric count, which this version does not yet do. All 200 committed
+cohort borrowers, run through this real engine (not a hand-rolled
+recomputation), match their own archetype's `expected_features`
+(`test_full_cohort_matches_expected_signatures_via_the_real_engine`).
+Load-bearing constraint carried forward from
 Phase 1: the feature engine computes numbers, it never decides anything
 with them — a threshold comparison or routing decision anywhere in
 `features/` means Phase 3 scope has leaked backward. `final
@@ -402,6 +430,10 @@ backend/
     features/
       metrics.py             IMPLEMENTED (Phase 2 Step 1) — the 7 pure
                             §14.2 metric functions + FEATURE_ENGINE_VERSION
+      engine.py                IMPLEMENTED (Phase 2 Step 6) —
+                            compute_features(canonical_data, as_of, clock)
+                            -> FeatureSnapshot; windows + aggregates +
+                            calls metrics.py, no formulas of its own
     cohort/
       archetypes.py           IMPLEMENTED (Phase 2 Step 3) — 9 D2
                             archetype specs (ArchetypeSpec/GenerationParams/

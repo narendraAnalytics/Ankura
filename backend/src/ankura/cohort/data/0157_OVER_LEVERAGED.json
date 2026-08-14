@@ -671,7 +671,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-13",
+          "transaction_date": "2026-08-07",
           "transaction_type": "CREDIT",
           "description": "CASH DEPOSIT - BRANCH",
           "amount_paise": 7761031,
@@ -682,7 +682,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-05",
+          "transaction_date": "2026-08-03",
           "transaction_type": "CREDIT",
           "description": "IMPS CR TOPCUST ADVANCE",
           "amount_paise": 8583040,
@@ -693,7 +693,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-19",
+          "transaction_date": "2026-08-10",
           "transaction_type": "CREDIT",
           "description": "UPI CR CUSTOMER-3 ORDER PAYMENT",
           "amount_paise": 22522174,
@@ -704,7 +704,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-06",
+          "transaction_date": "2026-08-03",
           "transaction_type": "DEBIT",
           "description": "ACH DR EMI-EXISTING LOAN LENDER-EXISTING",
           "amount_paise": 23133066,
@@ -715,7 +715,7 @@
           "is_debt_service": true
         },
         {
-          "transaction_date": "2026-08-30",
+          "transaction_date": "2026-08-06",
           "transaction_type": "DEBIT",
           "description": "UPI DR SUPPLIER-TOP VENDOR PAYMENT",
           "amount_paise": 4470877,
@@ -726,7 +726,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-11",
+          "transaction_date": "2026-08-06",
           "transaction_type": "DEBIT",
           "description": "UPI DR SUPPLIER-3 VENDOR PAYMENT",
           "amount_paise": 5283144,
@@ -737,9 +737,9 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-12",
+          "transaction_date": "2026-08-08",
           "transaction_type": "DEBIT",
-          "description": "UPI DR SUPPLIER-4 VENDOR PAYMENT",
+          "description": "RTGS DR SUPPLIER-4 RAW MATERIAL",
           "amount_paise": 5283144,
           "balance_after_paise": null,
           "bounced": false,
