@@ -39,6 +39,31 @@ class BankTransaction(BaseModel):
     """True for a returned/bounced instrument — direct input to the
     bounce_ratio formula (final architecture.txt §14.2)."""
 
+    counterparty_id: str | None = Field(default=None, max_length=128)
+    """Normalized counterparty identifier, assigned by the PROVIDER layer
+    (Setu AA / mock) from whatever raw payee/payer data it receives — never
+    parsed out of `description` at feature time. String-parsing provider
+    text in the feature engine is exactly the coupling the §5.2 provider
+    abstraction exists to prevent. None when the transaction has no
+    identifiable counterparty (e.g. a cash deposit/withdrawal, or the
+    provider genuinely could not resolve one) — customer/supplier
+    concentration formulas only ever sum transactions that HAVE this set."""
+
+    is_cash: bool = False
+    """True for a cash deposit or cash withdrawal, as opposed to a
+    transfer/electronic credit or debit. A provider-level classification
+    from the source instrument type, not inferred later — needed by
+    cash_deposit_ratio (final architecture.txt §14.2), which must not
+    conflate "a transfer that happens to be unlabeled" with "a cash
+    deposit"."""
+
+    is_debt_service: bool = False
+    """True for a debit that is loan/EMI repayment (existing debt service),
+    as opposed to any other kind of outflow. Feeds obligation_ratio's
+    existing_emi_outflow and dscr's total_debt_service inputs (final
+    architecture.txt §14.2) — the feature engine sums flagged debits rather
+    than re-deriving "which debits look like an EMI" from description text."""
+
 
 class BankAccountSummary(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
