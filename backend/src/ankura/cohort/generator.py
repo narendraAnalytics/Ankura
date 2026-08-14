@@ -93,7 +93,7 @@ MASTER_SEED = 20260813
 kickoff date (2026-08-13), pinned as a literal constant. Changing this
 constant changes every generated borrower; bump `GENERATOR_VERSION` too."""
 
-GENERATOR_VERSION = "1.0.0"
+GENERATOR_VERSION = "1.1.0"
 """Bumped whenever this module's generation logic changes in a way that
 would alter output — mirrors `features.metrics.FEATURE_ENGINE_VERSION`
 (CLAUDE.md rule 3: every mutating action pins the versions that produced
@@ -370,13 +370,21 @@ def _solve_aggregates(rng: random.Random, spec: ArchetypeSpec, months: list[date
     )
 
 
-def _month_dates(rng: random.Random, month_start: date, count: int) -> list[date]:
+def _month_dates(rng: random.Random, month_start: date, count: int, as_of: date) -> list[date]:
     """`count` deterministic, distinct-ish days within `month_start`'s
-    calendar month."""
+    calendar month — capped at `as_of` when `month_start` IS `as_of`'s own
+    month. Without this cap, a transaction could land after `as_of` (e.g.
+    2026-08-27 when `as_of` is 2026-08-13), which is nonsensical for real
+    provider data (nothing can be dated after the pull time) and silently
+    breaks `features/engine.py`'s trailing-window aggregation, which
+    correctly stops at `as_of` and would then be summing over FEWER
+    transactions than this generator's own aggregate math assumed."""
     days_in_month = (
         (date(month_start.year + (month_start.month == 12), month_start.month % 12 + 1, 1))
         - timedelta(days=1)
     ).day
+    if (month_start.year, month_start.month) == (as_of.year, as_of.month):
+        days_in_month = min(days_in_month, as_of.day)
     return sorted(
         date(month_start.year, month_start.month, rng.randint(1, days_in_month))
         for _ in range(count)
@@ -398,7 +406,11 @@ def _distribute_evenly(total: int, buckets: int) -> list[int]:
 
 
 def _build_transactions(
-    rng: random.Random, spec: ArchetypeSpec, months: list[date], agg: _Aggregates
+    rng: random.Random,
+    spec: ArchetypeSpec,
+    months: list[date],
+    agg: _Aggregates,
+    as_of: date,
 ) -> list[BankTransaction]:
     """Fraction-based allocation: every per-month amount/count is `target /
     aggregate_total` applied to that month's own total, so the SUM across
@@ -430,7 +442,7 @@ def _build_transactions(
         if cash_this_month > 0:
             transactions.append(
                 BankTransaction(
-                    transaction_date=_month_dates(rng, month_start, 1)[0],
+                    transaction_date=_month_dates(rng, month_start, 1, as_of)[0],
                     transaction_type=TransactionType.CREDIT,
                     description=_CASH_NARRATION,
                     amount_paise=cash_this_month,
@@ -447,7 +459,7 @@ def _build_transactions(
             narration = rng.choice(_CREDIT_NARRATIONS)
             transactions.append(
                 BankTransaction(
-                    transaction_date=_month_dates(rng, month_start, 1)[0],
+                    transaction_date=_month_dates(rng, month_start, 1, as_of)[0],
                     transaction_type=TransactionType.CREDIT,
                     description=narration.format(cp="TOPCUST"),
                     amount_paise=top_this_month,
@@ -458,7 +470,7 @@ def _build_transactions(
         other_credit_slices = max(1, rng.randint(1, 3))
         for slice_index, (slice_date, share) in enumerate(
             zip(
-                _month_dates(rng, month_start, other_credit_slices),
+                _month_dates(rng, month_start, other_credit_slices, as_of),
                 _distribute_evenly(transfer_credit_remaining, other_credit_slices),
                 strict=True,
             )
@@ -482,7 +494,7 @@ def _build_transactions(
         if agg.existing_emi_outflow > 0:
             transactions.append(
                 BankTransaction(
-                    transaction_date=_month_dates(rng, month_start, 1)[0],
+                    transaction_date=_month_dates(rng, month_start, 1, as_of)[0],
                     transaction_type=TransactionType.DEBIT,
                     description=_EMI_NARRATION.format(cp="LENDER-EXISTING"),
                     amount_paise=agg.existing_emi_outflow,
@@ -515,7 +527,7 @@ def _build_transactions(
             narration = rng.choice(_DEBIT_NARRATIONS)
             transactions.append(
                 BankTransaction(
-                    transaction_date=_month_dates(rng, month_start, 1)[0],
+                    transaction_date=_month_dates(rng, month_start, 1, as_of)[0],
                     transaction_type=TransactionType.DEBIT,
                     description=narration.format(cp="SUPPLIER-TOP"),
                     amount_paise=top_debit_this_month,
@@ -524,7 +536,11 @@ def _build_transactions(
             )
 
         for slice_index, (slice_date, share) in enumerate(
-            zip(_month_dates(rng, month_start, other_debit_slices), debit_shares, strict=True)
+            zip(
+                _month_dates(rng, month_start, other_debit_slices, as_of),
+                debit_shares,
+                strict=True,
+            )
         ):
             if share <= 0:
                 continue
@@ -542,7 +558,7 @@ def _build_transactions(
 
         if bounced_this_month > 0:
             bounced_amount_each = max(100_00, debit_budget // instruments_per_month)
-            for bounced_date in _month_dates(rng, month_start, bounced_this_month):
+            for bounced_date in _month_dates(rng, month_start, bounced_this_month, as_of):
                 transactions.append(
                     BankTransaction(
                         transaction_date=bounced_date,
@@ -554,12 +570,14 @@ def _build_transactions(
                 )
 
     if spec.params.has_circular_transactions:
-        transactions.extend(_build_ring(rng, months, agg))
+        transactions.extend(_build_ring(rng, months, agg, as_of))
 
     return transactions
 
 
-def _build_ring(rng: random.Random, months: list[date], agg: _Aggregates) -> list[BankTransaction]:
+def _build_ring(
+    rng: random.Random, months: list[date], agg: _Aggregates, as_of: date
+) -> list[BankTransaction]:
     """A→B→C→A circular-transaction ring: near-equal amounts moving
     through a small (3-member) counterparty set over a short (<=6 day)
     window, inflating apparent turnover — Step 3/4's fraud-archetype
@@ -568,6 +586,10 @@ def _build_ring(rng: random.Random, months: list[date], agg: _Aggregates) -> lis
     mid_month = months[len(months) // 2]
     ring_amount = max(50_000_00, agg.average_monthly_inflow // 3)
     start_day = rng.randint(1, 20)
+    day_cap = 28
+    if (mid_month.year, mid_month.month) == (as_of.year, as_of.month):
+        day_cap = min(day_cap, as_of.day)
+        start_day = min(start_day, max(1, day_cap - 2))
     ring: list[BankTransaction] = []
     legs = (
         (TransactionType.CREDIT, "RING-1", ring_amount),
@@ -577,7 +599,9 @@ def _build_ring(rng: random.Random, months: list[date], agg: _Aggregates) -> lis
     for offset, (txn_type, counterparty, amount) in enumerate(legs):
         ring.append(
             BankTransaction(
-                transaction_date=date(mid_month.year, mid_month.month, min(28, start_day + offset)),
+                transaction_date=date(
+                    mid_month.year, mid_month.month, min(day_cap, start_day + offset)
+                ),
                 transaction_type=txn_type,
                 description=_RING_NARRATION.format(cp=counterparty),
                 amount_paise=amount,
@@ -631,7 +655,7 @@ def generate_borrower(
     months = _month_starts(as_of, coverage_months)
 
     agg = _solve_aggregates(rng, spec, months)
-    transactions = _build_transactions(rng, spec, months, agg)
+    transactions = _build_transactions(rng, spec, months, agg, as_of.date())
 
     statement_start = months[0]
     statement_end = date(as_of.year, as_of.month, as_of.day)

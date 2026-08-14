@@ -213,8 +213,8 @@
     "THIN_FILE": 20
   },
   "as_of": "2026-08-13T00:00:00+00:00",
-  "checksum_sha256": "1066182c383ebdfede8d06b66ca9e2e2993c491e31f05912aa7e1bd600cdcb3a",
+  "checksum_sha256": "622336d1dde29153b42d981732cebc72aefb0cc3b1a018f06392a0cb40bef00e",
   "cohort_size": 200,
-  "generator_version": "1.0.0",
+  "generator_version": "1.1.0",
   "master_seed": 20260813
 }

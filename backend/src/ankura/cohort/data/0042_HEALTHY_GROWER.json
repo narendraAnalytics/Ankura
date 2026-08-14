@@ -836,7 +836,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-30",
+          "transaction_date": "2026-08-12",
           "transaction_type": "CREDIT",
           "description": "CASH DEPOSIT - BRANCH",
           "amount_paise": 6790160,
@@ -847,7 +847,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-08",
+          "transaction_date": "2026-08-04",
           "transaction_type": "CREDIT",
           "description": "IMPS CR TOPCUST ADVANCE",
           "amount_paise": 17290907,
@@ -858,7 +858,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-31",
+          "transaction_date": "2026-08-12",
           "transaction_type": "CREDIT",
           "description": "UPI CR CUSTOMER-4 ORDER PAYMENT",
           "amount_paise": 32821776,
@@ -869,7 +869,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-19",
+          "transaction_date": "2026-08-10",
           "transaction_type": "DEBIT",
           "description": "ACH DR EMI-EXISTING LOAN LENDER-EXISTING",
           "amount_paise": 8628320,
@@ -880,7 +880,7 @@
           "is_debt_service": true
         },
         {
-          "transaction_date": "2026-08-25",
+          "transaction_date": "2026-08-13",
           "transaction_type": "DEBIT",
           "description": "RTGS DR SUPPLIER-TOP RAW MATERIAL",
           "amount_paise": 2842313,
@@ -891,7 +891,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-12",
+          "transaction_date": "2026-08-06",
           "transaction_type": "DEBIT",
           "description": "RTGS DR SUPPLIER-4 RAW MATERIAL",
           "amount_paise": 11869054,
@@ -902,7 +902,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-27",
+          "transaction_date": "2026-08-09",
           "transaction_type": "DEBIT",
           "description": "RTGS DR SUPPLIER-0 RAW MATERIAL",
           "amount_paise": 11869053,

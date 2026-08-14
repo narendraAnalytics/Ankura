@@ -1,6 +1,6 @@
 {
   "application_id": "5a9d4327-3c42-5eba-9f91-83da02361f9d",
-  "borrower_pan": "HSHPD8383E",
+  "borrower_pan": "DDXCG8322E",
   "bank_accounts": [
     {
       "account_id": "acc-synthetic-0198",
@@ -550,7 +550,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-09",
+          "transaction_date": "2026-08-05",
           "transaction_type": "CREDIT",
           "description": "CASH DEPOSIT - BRANCH",
           "amount_paise": 12762614,
@@ -561,7 +561,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-14",
+          "transaction_date": "2026-08-07",
           "transaction_type": "CREDIT",
           "description": "IMPS CR TOPCUST ADVANCE",
           "amount_paise": 24622892,
@@ -572,9 +572,9 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-06",
+          "transaction_date": "2026-08-03",
           "transaction_type": "CREDIT",
-          "description": "IMPS CR CUSTOMER-0 ADVANCE",
+          "description": "RTGS CR CUSTOMER-0 SUPPLY PAYMENT",
           "amount_paise": 18117030,
           "balance_after_paise": null,
           "bounced": false,
@@ -583,9 +583,9 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-16",
+          "transaction_date": "2026-08-07",
           "transaction_type": "CREDIT",
-          "description": "RTGS CR CUSTOMER-1 SUPPLY PAYMENT",
+          "description": "UPI CR CUSTOMER-1 ORDER PAYMENT",
           "amount_paise": 18117029,
           "balance_after_paise": null,
           "bounced": false,
@@ -594,7 +594,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-28",
+          "transaction_date": "2026-08-08",
           "transaction_type": "CREDIT",
           "description": "UPI CR CUSTOMER-2 ORDER PAYMENT",
           "amount_paise": 18117029,
@@ -605,7 +605,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-29",
+          "transaction_date": "2026-08-07",
           "transaction_type": "DEBIT",
           "description": "NEFT DR-SUPPLIER-TOP PURCHASE ORDER",
           "amount_paise": 20082722,
@@ -616,7 +616,7 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-04",
+          "transaction_date": "2026-08-06",
           "transaction_type": "DEBIT",
           "description": "UPI DR SUPPLIER-0 VENDOR PAYMENT",
           "amount_paise": 8773429,
@@ -627,9 +627,9 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-11",
+          "transaction_date": "2026-08-06",
           "transaction_type": "DEBIT",
-          "description": "UPI DR SUPPLIER-1 VENDOR PAYMENT",
+          "description": "NEFT DR-SUPPLIER-1 PURCHASE ORDER",
           "amount_paise": 8773429,
           "balance_after_paise": null,
           "bounced": false,
@@ -638,9 +638,9 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-13",
+          "transaction_date": "2026-08-07",
           "transaction_type": "DEBIT",
-          "description": "UPI DR SUPPLIER-2 VENDOR PAYMENT",
+          "description": "RTGS DR SUPPLIER-2 RAW MATERIAL",
           "amount_paise": 8773429,
           "balance_after_paise": null,
           "bounced": false,
@@ -649,9 +649,9 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-14",
+          "transaction_date": "2026-08-07",
           "transaction_type": "DEBIT",
-          "description": "UPI DR SUPPLIER-3 VENDOR PAYMENT",
+          "description": "NEFT DR-SUPPLIER-3 PURCHASE ORDER",
           "amount_paise": 8773429,
           "balance_after_paise": null,
           "bounced": false,
@@ -660,9 +660,9 @@
           "is_debt_service": false
         },
         {
-          "transaction_date": "2026-08-30",
+          "transaction_date": "2026-08-07",
           "transaction_type": "DEBIT",
-          "description": "NEFT DR-SUPPLIER-4 PURCHASE ORDER",
+          "description": "RTGS DR SUPPLIER-4 RAW MATERIAL",
           "amount_paise": 8773428,
           "balance_after_paise": null,
           "bounced": false,
@@ -678,7 +678,7 @@
   "data_quality": {
     "coverage_months": 6,
     "source_count": 1,
-    "confidence": 0.5973
+    "confidence": 0.6634
   },
   "as_of": "2026-08-13T00:00:00Z"
 }
