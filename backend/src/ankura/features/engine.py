@@ -38,12 +38,33 @@ Convention pinned in `generator.py` (Step 4) and honored here: the
 only (EMI is an auto-debit mandate, not a presented cheque/vendor
 instrument, and already has its own signal via `obligation_ratio`/`dscr`).
 
-`data_quality.confidence` computed here is a MINIMUM VIABLE formula —
-`FeatureSnapshot` requires the field to exist, so Step 6 cannot leave it
-undefined, but Step 7 owns finalizing, documenting, and pinning the real
-confidence formula into `final architecture.txt` §14.2 (including
-penalizing undefined-metric count, which this version does not yet do).
-Treat this formula as provisional until Step 7 lands.
+`data_quality.confidence` (Step 7, finalized): a documented, deterministic
+function of coverage_months, source_count, and how many of the 7 §14.2
+metrics came back undefined — pinned in `_compute_confidence()` below and
+in `final architecture.txt` §14.2. It is NOT a probability of default and
+must never be described as one anywhere (code, docstring, console copy) —
+it measures how much evidence a snapshot rests on, nothing about the
+borrower's likelihood of repayment.
+
+ASSUMPTION FLAGGED (confidence vs. `archetypes.py`'s `expected_confidence`):
+several archetypes (seasonal_trader, declining_business, gst_bank_mismatch,
+circular_transactions, over_leveraged, recovering_from_stress) share
+IDENTICAL `coverage_months`/`source_count` generation ranges (9-12 months,
+2-3 sources, 0 undefined metrics) yet were assigned different
+`expected_confidence` bands back at Step 3 — before this formula existed.
+No function of (coverage, source, undefined-count) alone can hit every one
+of those bands for every possible draw, so this engine deliberately does
+NOT try to reproduce `archetypes.py`'s `expected_confidence` field.  That
+field feeds the GENERATOR's own synthetic `CanonicalFinancialData.
+data_quality.confidence` (`cohort/generator.py`'s `generate_borrower`) — an
+upstream, provider-self-reported figure the engine already ignores by
+design (Step 6: `compute_features()` never reads `canonical_data.
+data_quality`). Confidence here is independently DERIVED from what the
+engine can itself observe post-windowing, never trusted from the input.
+Step 7's actual proof obligation — thin_file/new_to_credit clustering at
+the bottom, healthy_grower at the top — is an ordering/clustering property
+across the real cohort, verified in `tests/test_feature_engine.py`, not a
+per-borrower match against `archetypes.py`'s `expected_confidence` range.
 """
 
 from __future__ import annotations
@@ -225,17 +246,53 @@ def _gst_turnover_in_window(
     return total, sorted(months_in_window)
 
 
-def _confidence(coverage_months: int, source_count: int) -> float:
-    """Provisional confidence formula (see module docstring) — a
-    documented, deterministic function of coverage and source count,
-    bounded to [0, 1]. NOT a probability of default; a measure of how much
-    evidence the snapshot rests on. Step 7 finalizes and pins the real
-    version into final architecture.txt §14.2."""
+_UNDEFINED_METRIC_DENOMINATOR = 7
+"""Fixed denominator for `C_defined` — the count of §14.2 metrics
+(`dscr`, `obligation_ratio`, `bounce_ratio`, `bank_gst_gap`,
+`cash_deposit_ratio`, `customer_concentration`, `supplier_concentration`),
+pinned as a constant rather than derived dynamically from
+`FeatureSnapshot`'s field count. If a future engine version adds an eighth
+metric, that is a `FEATURE_ENGINE_VERSION` bump (module docstring / CLAUDE.md
+rule 3) with a deliberate decision about this constant — never a silent
+change to what an already-computed historical confidence score means."""
+
+
+def _compute_confidence(
+    coverage_months: int, source_count: int, undefined_metric_count: int
+) -> float:
+    """Final Step 7 confidence formula — a documented, deterministic
+    function of three evidence signals, pinned once here and in
+    `final architecture.txt` §14.2:
+
+        confidence = 0.5*C_coverage + 0.3*C_source + 0.2*C_defined
+          C_coverage = min(coverage_months, WINDOW_MONTHS) / WINDOW_MONTHS
+          C_source   = min(source_count, 3) / 3
+          C_defined  = (7 - undefined_metric_count) / 7
+
+    Weights: coverage counts most (the strongest evidence signal — a thin
+    statement history can't be offset by having many sources attached),
+    source diversity second, and how many of the 7 metrics actually came
+    back defined (not None) third — an archetype that produces several
+    structurally-undefined metrics (Step 1's zero-denominator discipline)
+    genuinely rests on less usable evidence, even with good coverage.
+
+    Computed in `Decimal` (D5 discipline — never binary-float
+    intermediates), rounded ROUND_HALF_UP to 6 decimal places, clamped to
+    [0, 1], exposed as `float`. NOT a probability of default — see module
+    docstring."""
     coverage_component = Decimal(min(coverage_months, WINDOW_MONTHS)) / Decimal(WINDOW_MONTHS)
     source_component = Decimal(min(source_count, 3)) / Decimal(3)
-    raw = coverage_component * Decimal("0.7") + source_component * Decimal("0.3")
-    rounded = raw.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
-    return float(min(Decimal("1.0"), rounded))
+    defined_component = Decimal(_UNDEFINED_METRIC_DENOMINATOR - undefined_metric_count) / Decimal(
+        _UNDEFINED_METRIC_DENOMINATOR
+    )
+    raw = (
+        coverage_component * Decimal("0.5")
+        + source_component * Decimal("0.3")
+        + defined_component * Decimal("0.2")
+    )
+    rounded = raw.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP)
+    clamped = max(Decimal("0.0"), min(Decimal("1.0"), rounded))
+    return float(clamped)
 
 
 def _build_provenance(
@@ -313,10 +370,20 @@ def compute_features(
         + (1 if gst_turnover is not None else 0)
         + (1 if canonical_data.bureau is not None else 0)
     )
+    computed_metrics = (
+        dscr,
+        obligation_ratio,
+        bounce_ratio,
+        bank_gst_gap,
+        cash_deposit_ratio,
+        customer_concentration,
+        supplier_concentration,
+    )
+    undefined_metric_count = sum(1 for value in computed_metrics if value is None)
     data_quality = DataQuality(
         coverage_months=coverage_months,
         source_count=source_count,
-        confidence=_confidence(coverage_months, source_count),
+        confidence=_compute_confidence(coverage_months, source_count, undefined_metric_count),
     )
 
     provenance = _build_provenance(canonical_data, transactions, gst_months_used)

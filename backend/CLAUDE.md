@@ -344,6 +344,41 @@ metric count, which this version does not yet do. All 200 committed
 cohort borrowers, run through this real engine (not a hand-rolled
 recomputation), match their own archetype's `expected_features`
 (`test_full_cohort_matches_expected_signatures_via_the_real_engine`).
+Step 7 (data quality / coverage / confidence) is also done: `engine.py`'s
+`_compute_confidence(coverage_months, source_count, undefined_metric_count)`
+replaces Step 6's provisional coverage/source-only formula with
+`confidence = 0.5*C_coverage + 0.3*C_source + 0.2*C_defined` (`C_defined`
+= fraction of the 7 §14.2 metrics that came back defined, not `None`) —
+`Decimal` arithmetic, `ROUND_HALF_UP` to 6dp, clamped `[0,1]`, pinned into
+`final architecture.txt` §14.2's new "Confidence" subsection alongside an
+explicit "not a probability of default" statement. `coverage_months`
+(`_distinct_months_with_data()`) and `source_count` already existed from
+Step 6 unchanged. One real ambiguity surfaced and resolved rather than
+silently either way: `cohort/archetypes.py`'s `expected_confidence` field
+(declared at Step 3) cannot be a per-borrower validation target for this
+formula — several archetypes share identical coverage/source generation
+ranges with different `expected_confidence` bands, which no (coverage,
+source, undefined-count) function can simultaneously satisfy. Resolved by
+treating `expected_confidence` as the GENERATOR's own target for the
+synthetic input `CanonicalFinancialData.data_quality.confidence`
+(`generator.py:702`, an upstream self-reported figure the engine already
+ignored since Step 6) rather than an engine-output expectation — documented
+in both `engine.py`'s module docstring and a new docstring on
+`ArchetypeSpec.expected_confidence` itself. A second AI reviewer
+independently reached the same conclusion (`../cit.txt`) and, via a live
+web search, confirmed numeric Data Quality Indices are a real, current RBI
+concept (Master Direction – Credit Information Reporting Directions, 2025)
+— a live regulatory precedent for confidence-as-evidence-quality, distinct
+from a PD score. PROVE IT verified via the real engine over all 200
+committed cohort borrowers: thin_file and new_to_credit's mean confidence
+sits strictly below every other archetype's; every healthy_grower borrower
+that lands full 12-month coverage AND all 3 sources hits the formula's
+exact ceiling of 1.0 (`test_thin_file_and_new_to_credit_cluster_at_the_
+bottom_of_real_cohort_confidence`), plus 4 hand-worked boundary-value cases
+for `_compute_confidence` itself. `_UNDEFINED_METRIC_DENOMINATOR = 7` is a
+fixed constant (not a dynamic count of `FeatureSnapshot` fields) so a future
+added metric is a deliberate `FEATURE_ENGINE_VERSION` decision, never a
+silent reweight of historical confidence scores.
 Load-bearing constraint carried forward from
 Phase 1: the feature engine computes numbers, it never decides anything
 with them — a threshold comparison or routing decision anywhere in
@@ -430,10 +465,12 @@ backend/
     features/
       metrics.py             IMPLEMENTED (Phase 2 Step 1) — the 7 pure
                             §14.2 metric functions + FEATURE_ENGINE_VERSION
-      engine.py                IMPLEMENTED (Phase 2 Step 6) —
+      engine.py                IMPLEMENTED (Phase 2 Steps 6-7) —
                             compute_features(canonical_data, as_of, clock)
                             -> FeatureSnapshot; windows + aggregates +
-                            calls metrics.py, no formulas of its own
+                            calls metrics.py, no formulas of its own;
+                            _compute_confidence() (Step 7) finalizes
+                            data_quality.confidence
     cohort/
       archetypes.py           IMPLEMENTED (Phase 2 Step 3) — 9 D2
                             archetype specs (ArchetypeSpec/GenerationParams/

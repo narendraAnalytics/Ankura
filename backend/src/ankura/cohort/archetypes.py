@@ -146,6 +146,25 @@ class ArchetypeSpec:
     customer_concentration, supplier_concentration."""
     expected_coverage_months: Range
     expected_confidence: Range
+    """GENERATOR-side target only (`cohort/generator.py`'s
+    `generate_borrower` samples from this band to stamp the synthetic
+    `CanonicalFinancialData.data_quality.confidence` an upstream provider
+    would self-report) — NOT a validation target for the feature engine's
+    own `FeatureSnapshot.data_quality.confidence`. The engine (Step 7,
+    `features/engine.py`) independently derives its confidence from
+    coverage/source/undefined-metric-count observed post-windowing and
+    deliberately never reads `canonical_data.data_quality` at all,
+    matching Step 6's original design. Several archetypes here share
+    identical coverage_months/source_count ranges (e.g. seasonal_trader,
+    declining_business, gst_bank_mismatch, circular_transactions,
+    over_leveraged, recovering_from_stress all draw 9-12mo/2-3 sources
+    with 0 undefined metrics) yet were assigned different
+    `expected_confidence` bands before the engine's formula existed — no
+    single (coverage, source, undefined-count) function can satisfy all of
+    those bands simultaneously, so Step 7 does not try. Its actual proof
+    obligation (thin_file/new_to_credit clustering at the bottom,
+    healthy_grower at the top) is checked as a cohort-level ordering test
+    in `tests/test_feature_engine.py`, not a per-borrower band match here."""
     expect_circular_ring: bool = False
     """True only for the archetype the Step 8 ring detector must trip on;
     every OTHER archetype must NOT trip it (false-positive honesty, Step 8)."""
