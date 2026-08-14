@@ -124,7 +124,12 @@ Step 4 (`backend/src/ankura/cohort/generator.py` — the deterministic,
 seeded generator that turns each archetype spec into a real
 `CanonicalFinancialData`, values solved backward from the pinned §14.2
 formulas rather than hand-typed, verified byte-identical across both
-same-process and cross-process regeneration) are done. See
+same-process and cross-process regeneration), and Step 5 (the 200-borrower
+cohort — proof asset A1 — generated and committed to
+`backend/src/ankura/cohort/data/`, one JSON file per borrower plus a
+manifest with a checksum over the whole set, regenerable via
+`uv run python -m ankura.cohort.generate`, with a drift test keeping the
+committed files and the generator from silently diverging) are done. See
 `backend/CLAUDE.md` for implementation-level detail and `endgoal.txt`
 (gitignored, local-only) for the full end-to-end product narrative these
 phases are building toward.
