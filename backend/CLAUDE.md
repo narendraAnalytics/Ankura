@@ -180,23 +180,51 @@ timestamp, and dev Neon is confirmed live in `aws-us-east-2` (not a
 residency violation — the guard only applies to `ENV=prod`). Phase 1 is
 closed, tagged `p1-foundation`.
 
-**Phase 2 (synthetic cohort + deterministic feature engine) is starting.**
+**Phase 2 (synthetic cohort + deterministic feature engine) is underway.**
 Plan is `../phase2.txt` (same checkbox/PROVE-IT format as `phase1.txt`,
-gitignored/local-only). Nothing in `src/ankura` exists for it yet — no
-`features/`, `cohort/`, or `providers/` package. Step 0 there freezes nine
-open decisions (cohort size/mix, ratio rounding convention, the D6
-indicative-EMI-rate stand-in, etc.) before any code gets written, same
-discipline as Phase 1 Step 0. Load-bearing constraint carried forward from
-Phase 1: the feature engine computes numbers, it never decides anything
-with them — a threshold comparison or routing decision anywhere in
-`features/` means Phase 3 scope has leaked backward. `final architecture.txt`
-§14.2 is where every metric formula must be pinned exactly once, and §16
-is where Phase 1's five hard-won concurrency/transaction patterns
-(self-contained audit-style writes, claim-before-work idempotency,
-advisory locks over `SELECT ... FOR UPDATE`, hash-pointer chain ordering)
-are recorded for reuse — `feature_snapshots` (Phase 2 Step 9) is planned
-as an immutable, no-UPDATE-grant table exactly like `audit_events`, so
-those same patterns apply directly, not just by analogy.
+gitignored/local-only). Step 0 froze all nine open decisions (200-borrower
+cohort, all 9 archetypes non-uniformly mixed, cohort committed AND
+regenerable, feature-signature ground truth deferring bands/routing to P3,
+`Decimal`/ROUND_HALF_UP-6dp ratio rounding, an 18% p.a. reducing-balance
+indicative EMI rate as a P2-only stand-in for P3's rate card, Indian
+Apr-Mar FY with Sep-Nov/Feb-Apr seasonality, supplier_concentration +
+circular-transaction detection implemented while overdraft-utilisation/
+sudden-routing defer to P7, and raw `CanonicalFinancialData` staying
+transient/never persisted) before any code was written, same discipline as
+Phase 1 Step 0. Step 1 is also done: `features/metrics.py` pins all seven
+metrics (`dscr`, `obligation_ratio`, `bounce_ratio`, `bank_gst_gap`,
+`cash_deposit_ratio`, `customer_concentration`, `supplier_concentration`)
+as pure functions — paise/counts in, `float | None` out, no DB/clock/I/O.
+Each divides via `Decimal` and rounds `ROUND_HALF_UP` to 6 places at the
+output boundary (a shared `_ratio()` helper so the rounding rule lives in
+exactly one place), and returns `None` — never a silent `0.0` — when its
+denominator is structurally zero, since "no data to compute from" and "a
+real measured zero" are different credit facts (documented per-metric in
+each docstring, e.g. zero presented instruments vs. zero bounces).
+`FEATURE_ENGINE_VERSION` lives in this module. `obligation_ratio`'s own
+docstring explains why it isn't named "foir" without ever spelling that
+word — `grep -ri "foir" src/` must return nothing and is a hard PROVE IT
+gate, not just a naming preference. `test_metrics.py` hand-computes one
+worked example plus every zero-denominator case per metric (18 tests, all
+independently verified on paper first). Step 2 (growing
+`CanonicalFinancialData`/defining `FeatureSnapshot`) has started:
+`BankTransaction` (`contracts/financial.py`) grew `counterparty_id` (set by
+the provider layer, never parsed from `description` at feature time —
+that's exactly the coupling the §5.2 provider abstraction exists to
+prevent), `is_cash`, and `is_debt_service`, the inputs the
+concentration/cash-deposit/obligation formulas need. Load-bearing
+constraint carried forward from Phase 1: the feature engine computes
+numbers, it never decides anything with them — a threshold comparison or
+routing decision anywhere in `features/` means Phase 3 scope has leaked
+backward. `final architecture.txt` §14.2 is where every metric formula
+must be pinned exactly once (now amended with `supplier_concentration` and
+the rounding/undefined-value rules), and §16 is where Phase 1's five
+hard-won concurrency/transaction patterns (self-contained audit-style
+writes, claim-before-work idempotency, advisory locks over
+`SELECT ... FOR UPDATE`, hash-pointer chain ordering) are recorded for
+reuse — `feature_snapshots` (Phase 2 Step 9) is planned as an immutable,
+no-UPDATE-grant table exactly like `audit_events`, so those same patterns
+apply directly, not just by analogy.
 
 ## Source of truth for architecture
 
@@ -262,7 +290,12 @@ backend/
                            borrower, application, audit, idempotency (RLS)
     contracts/            IMPLEMENTED (Step 5) — common, application,
                            financial (write these BEFORE tables —
-                           final architecture.txt §14.1)
+                           final architecture.txt §14.1). financial.py
+                           grew counterparty_id/is_cash/is_debt_service on
+                           BankTransaction in Phase 2 Step 2 (in progress)
+    features/
+      metrics.py             IMPLEMENTED (Phase 2 Step 1) — the 7 pure
+                            §14.2 metric functions + FEATURE_ENGINE_VERSION
     api/
       deps.py               IMPLEMENTED (Step 8) — get_current_tenant():
                            Bearer key -> peppered hash lookup ->
@@ -323,16 +356,18 @@ statements — psycopg3 handles this better than asyncpg but still needs
 **Contracts before tables.** Every DB table is derived from a Pydantic model
 in `contracts/`, written first. Don't invent a column that has no contract.
 
-**Canonical metric formulas live in exactly one place** (feature engine
-module, arriving Phase 2) and are documented in `final architecture.txt` §14.2
-— `dscr`, `obligation_ratio` (not "FOIR" — that's a retail concept),
-`bounce_ratio`, `bank_gst_gap`, `cash_deposit_ratio`, `customer_concentration`.
-Synthetic ground-truth borrowers (Phase 2) must be generated *from* these
-formulas, never hand-typed to a plausible-looking number.
+**Canonical metric formulas live in exactly one place**: `features/metrics.py`
+(Phase 2 Step 1, done), documented in `final architecture.txt` §14.2 —
+`dscr`, `obligation_ratio` (not "FOIR" — that's a retail concept),
+`bounce_ratio`, `bank_gst_gap`, `cash_deposit_ratio`, `customer_concentration`,
+`supplier_concentration`. Synthetic ground-truth borrowers (Phase 2 Step 4)
+must be generated *from* these formulas, never hand-typed to a
+plausible-looking number.
 
-**No credit logic in Phase 1.** Scoring, features, policy evaluation, pricing
-— none of it belongs yet. If you're writing a DSCR calculation while working
-Phase 1 steps, stop; that's Phase 2/3 scope.
+**No credit logic, ever, in `features/`.** Scoring, policy evaluation,
+pricing, routing, thresholds, bands — none of that belongs in the feature
+engine at any phase. `features/metrics.py` computes `dscr = 1.72`; it never
+decides `1.72 >= 1.25 -> PASS`. That's Phase 3's policy engine.
 
 ## Testing expectations
 
