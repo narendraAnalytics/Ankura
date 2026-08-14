@@ -105,7 +105,7 @@ ordering must walk by hash pointer, never by `recorded_at`/timestamp
 runs in `aws-us-east-2`, confirmed not a residency violation since the
 `ENV=prod`-only guard never applied to it.
 
-**Phase 2 (synthetic cohort + deterministic feature engine) is starting.**
+**Phase 2 (synthetic cohort + deterministic feature engine) is underway.**
 Plan is in `phase2.txt` (gitignored, local-only, same checkbox/PROVE-IT
 format as `phase1.txt`) — goal: turn a `CanonicalFinancialData` object into
 a versioned, provenance-carrying `FeatureSnapshot` using formulas pinned
@@ -113,10 +113,13 @@ exactly once (`final architecture.txt` §14.2), plus the 200-borrower
 synthetic cohort (`ankuraworkflow.txt` §7.3/§9.5 proof asset A1) generated
 FROM those formulas, seeded and committed to the repo. No policy, no
 scorecard, no routing, no LLM — the feature engine computes numbers, it
-never decides anything with them (that's Phase 3). Step 0 freezes nine
-open decisions (cohort size/mix, ratio rounding, proposed-EMI convention,
-etc.) before any implementation starts, same discipline as Phase 1 Step 0.
-See `endgoal.txt` (gitignored, local-only) for the full end-to-end product
+never decides anything with them (that's Phase 3). Step 0 (nine open
+decisions — cohort size/mix, ratio rounding, proposed-EMI convention,
+etc.) and Step 1 (`backend/src/ankura/features/metrics.py` — all seven
+§14.2 metrics, pure functions, hand-computed tests) are done; Step 2
+(growing `CanonicalFinancialData`, defining `FeatureSnapshot`) is in
+progress. See `backend/CLAUDE.md` for implementation-level detail and
+`endgoal.txt` (gitignored, local-only) for the full end-to-end product
 narrative these phases are building toward.
 
 ## Working conventions for this repo
