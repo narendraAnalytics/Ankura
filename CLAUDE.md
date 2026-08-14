@@ -115,12 +115,14 @@ FROM those formulas, seeded and committed to the repo. No policy, no
 scorecard, no routing, no LLM — the feature engine computes numbers, it
 never decides anything with them (that's Phase 3). Step 0 (nine open
 decisions — cohort size/mix, ratio rounding, proposed-EMI convention,
-etc.) and Step 1 (`backend/src/ankura/features/metrics.py` — all seven
-§14.2 metrics, pure functions, hand-computed tests) are done; Step 2
-(growing `CanonicalFinancialData`, defining `FeatureSnapshot`) is in
-progress. See `backend/CLAUDE.md` for implementation-level detail and
-`endgoal.txt` (gitignored, local-only) for the full end-to-end product
-narrative these phases are building toward.
+etc.), Step 1 (`backend/src/ankura/features/metrics.py` — all seven
+§14.2 metrics, pure functions, hand-computed tests), Step 2 (grew
+`CanonicalFinancialData`, defined `FeatureSnapshot`), and Step 3
+(`backend/src/ankura/cohort/archetypes.py` — all nine D2 archetypes as
+declarative specs with range/direction expected feature signatures, no
+generator yet) are done. See `backend/CLAUDE.md` for implementation-level
+detail and `endgoal.txt` (gitignored, local-only) for the full end-to-end
+product narrative these phases are building toward.
 
 ## Working conventions for this repo
 
