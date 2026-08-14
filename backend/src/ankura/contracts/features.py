@@ -15,12 +15,13 @@ into a number that would later look like a real measurement.
 
 from __future__ import annotations
 
+from datetime import date
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ankura.contracts.common import AsOf, UtcDatetime
-from ankura.contracts.financial import DataQuality
+from ankura.contracts.common import AsOf, MoneyPaise, UtcDatetime
+from ankura.contracts.financial import DataQuality, TransactionType
 
 
 class ProvenanceEntry(BaseModel):
@@ -42,6 +43,43 @@ class ProvenanceEntry(BaseModel):
     """YYYY-MM periods actually consumed from this source. Lets a reviewer
     see the aligned window (Step 8's bank/GST alignment requirement) without
     re-deriving it from raw data that, per D9, is never persisted."""
+
+
+class RingLeg(BaseModel):
+    """One transaction inside a detected circular-transaction ring (Step 8)
+    — a single leg of the evidence, never collapsed into a summary
+    statistic. `counterparty_id` is never `None` here: `find_circular_
+    transaction_rings` (`features/signals.py`) only ever considers
+    transactions that already carry one."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    transaction_date: date
+    transaction_type: TransactionType
+    counterparty_id: str = Field(min_length=1, max_length=128)
+    amount_paise: MoneyPaise
+
+
+class CircularTransactionFinding(BaseModel):
+    """Structured evidence for ONE detected transaction ring — never a bare
+    boolean (phase2.txt Step 8: "each signal outputs a structured,
+    evidence-carrying finding ... never a bare bool"). Both P3's Decision
+    Record and P5's explanation layer need the underlying evidence (which
+    transactions, which counterparties, what magnitude), not a fraud/
+    no-fraud flag neither of them could reconstruct evidence from later.
+    Deliberately carries no raw transaction `description` text — that
+    field is attacker-controllable (the P5 prompt-injection surface
+    `cohort/generator.py`'s ring narration deliberately plants) and this
+    finding is durable, persisted output (Step 9), not a place for
+    unsanitized narration to travel forward into."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    window_start: date
+    window_end: date
+    legs: list[RingLeg] = Field(min_length=3)
+    max_amount_paise: MoneyPaise
+    min_amount_paise: MoneyPaise
 
 
 class FeatureSnapshot(BaseModel):
@@ -84,3 +122,10 @@ class FeatureSnapshot(BaseModel):
 
     data_quality: DataQuality
     provenance: list[ProvenanceEntry] = Field(default_factory=list)
+
+    circular_transaction_findings: list[CircularTransactionFinding] = Field(default_factory=list)
+    """Step 8 negative/fraud-like signal — empty for the overwhelming
+    majority of borrowers (false-positive honesty is asserted by test).
+    Presence of findings is evidence for a later decision-maker to weigh,
+    never itself a decision — no threshold/verdict logic reads this list
+    anywhere in `features/`."""

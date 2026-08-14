@@ -65,6 +65,17 @@ Step 7's actual proof obligation — thin_file/new_to_credit clustering at
 the bottom, healthy_grower at the top — is an ordering/clustering property
 across the real cohort, verified in `tests/test_feature_engine.py`, not a
 per-borrower match against `archetypes.py`'s `expected_confidence` range.
+
+Step 8 (negative/fraud-like signals): `bank_gst_gap` now compares ALIGNED
+windows — `_aligned_bank_credit_turnover()` restricts the bank side to
+exactly the calendar months GST has filed data for, never the full
+12-month bank window regardless of how much GST coverage exists (see its
+own docstring for the bug this fixes). Circular-transaction ring detection
+(`features/signals.py`'s `find_circular_transaction_rings()`) runs over the
+same windowed transactions and returns structured evidence, never a bare
+bool — see that module's docstring for the detection parameters and why
+each one is set where it is. Neither signal decides anything; both are
+evidence for Phase 3 (or a human reviewer) to weigh.
 """
 
 from __future__ import annotations
@@ -87,6 +98,7 @@ from ankura.contracts.financial import (
 )
 from ankura.features import metrics as m
 from ankura.features.metrics import FEATURE_ENGINE_VERSION
+from ankura.features.signals import find_circular_transaction_rings
 
 WINDOW_MONTHS = 12
 """Trailing-window length, relative to `as_of` (Step 0 D7). Not the same
@@ -224,11 +236,16 @@ def _gst_turnover_in_window(
     canonical_data: CanonicalFinancialData, window_start: date, window_end: date
 ) -> tuple[int | None, list[str]]:
     """Sum of filed GST turnover whose period falls inside the same
-    trailing window as the bank data — the alignment Step 8 will later
-    make an explicit, auditable finding of; Step 6 already applies it
-    mechanically so `bank_gst_gap` is never comparing mismatched windows.
-    `None` (not 0) when nothing was filed in-window, so `bank_gst_gap`
-    correctly comes back undefined rather than a fabricated 100% gap."""
+    trailing window as the bank data. `None` (not 0) when nothing was filed
+    in-window, so `bank_gst_gap` correctly comes back undefined rather than
+    a fabricated 100% gap. Returns the exact `months_used` list — Step 8
+    doubles this as the aligned window: `_aligned_bank_credit_turnover()`
+    below restricts the BANK side of `bank_gst_gap` to exactly these same
+    months, so the ratio never compares (e.g.) 12 months of bank turnover
+    against 6 months of GST filings, a real and easy bug (phase2.txt Step
+    8) — comparing mismatched windows would silently overstate the gap for
+    any borrower whose GST filing history is shorter than its bank
+    history, which real (P7) providers make no promise not to hand us."""
     months_in_window: list[str] = []
     total = 0
     found = False
@@ -244,6 +261,29 @@ def _gst_turnover_in_window(
     if not found:
         return None, []
     return total, sorted(months_in_window)
+
+
+def _month_key(transaction: BankTransaction) -> str:
+    return f"{transaction.transaction_date.year:04d}-{transaction.transaction_date.month:02d}"
+
+
+def _aligned_bank_credit_turnover(
+    transactions: list[BankTransaction], months_used: list[str]
+) -> int:
+    """Bank credit turnover restricted to exactly the calendar months GST
+    actually has filed data for (`months_used`, from
+    `_gst_turnover_in_window`) — the Step 8 alignment fix. Deliberately a
+    SEPARATE figure from `_Aggregates.total_credits` (which stays the full
+    12-month bank total for every other metric): `bank_gst_gap` is the only
+    ratio that compares two different sources against each other, so it is
+    the only one that needs its own aligned inputs rather than the shared
+    window aggregate."""
+    aligned_months = set(months_used)
+    return sum(
+        t.amount_paise
+        for t in transactions
+        if t.transaction_type is TransactionType.CREDIT and _month_key(t) in aligned_months
+    )
 
 
 _UNDEFINED_METRIC_DENOMINATOR = 7
@@ -355,7 +395,9 @@ def compute_features(
     )
     bounce_ratio = m.bounce_ratio(agg.bounced_count, agg.non_emi_debit_count)
     bank_gst_gap = (
-        m.bank_gst_gap(agg.total_credits, gst_turnover) if gst_turnover is not None else None
+        m.bank_gst_gap(_aligned_bank_credit_turnover(transactions, gst_months_used), gst_turnover)
+        if gst_turnover is not None
+        else None
     )
     cash_deposit_ratio = m.cash_deposit_ratio(agg.cash_deposits, agg.total_credits)
     customer_concentration = m.customer_concentration(
@@ -387,6 +429,7 @@ def compute_features(
     )
 
     provenance = _build_provenance(canonical_data, transactions, gst_months_used)
+    circular_transaction_findings = find_circular_transaction_rings(transactions)
 
     return FeatureSnapshot(
         application_id=canonical_data.application_id,
@@ -403,4 +446,5 @@ def compute_features(
         supplier_concentration=supplier_concentration,
         data_quality=data_quality,
         provenance=provenance,
+        circular_transaction_findings=circular_transaction_findings,
     )

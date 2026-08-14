@@ -224,3 +224,32 @@ def test_thin_file_and_new_to_credit_cluster_at_the_bottom_of_real_cohort_confid
     # thin coverage, or an undefined metric) even if a couple of other
     # clean, well-covered archetypes land within noise of it.
     assert mean_confidence[ArchetypeName.HEALTHY_GROWER] >= max(mean_confidence.values()) - 0.02
+
+
+# --- Step 8: negative / fraud-like signals ----------------------------------
+
+
+def test_circular_transactions_archetype_trips_the_ring_detector_every_other_does_not() -> None:
+    """Step 8 PROVE IT, literal wording: the circular_transactions
+    archetype trips the ring detector; the other eight archetypes do not —
+    run over the real committed cohort through the real engine, not a
+    hand-picked sample."""
+    borrowers_without_a_finding: list[tuple[int, ArchetypeName]] = []
+    borrowers_with_a_finding: list[tuple[int, ArchetypeName]] = []
+    for index, archetype in enumerate(ARCHETYPE_ASSIGNMENT):
+        borrower = generate_borrower(index, archetype, DEFAULT_COHORT_AS_OF)
+        snapshot = compute_features(borrower, DEFAULT_COHORT_AS_OF, SystemClock())
+        if snapshot.circular_transaction_findings:
+            borrowers_with_a_finding.append((index, archetype))
+        else:
+            borrowers_without_a_finding.append((index, archetype))
+
+    non_fraud_with_a_finding = [
+        (i, a) for i, a in borrowers_with_a_finding if a is not ArchetypeName.CIRCULAR_TRANSACTIONS
+    ]
+    assert not non_fraud_with_a_finding, non_fraud_with_a_finding
+
+    circular_without_a_finding = [
+        (i, a) for i, a in borrowers_without_a_finding if a is ArchetypeName.CIRCULAR_TRANSACTIONS
+    ]
+    assert not circular_without_a_finding, circular_without_a_finding

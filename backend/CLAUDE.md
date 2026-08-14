@@ -379,6 +379,41 @@ for `_compute_confidence` itself. `_UNDEFINED_METRIC_DENOMINATOR = 7` is a
 fixed constant (not a dynamic count of `FeatureSnapshot` fields) so a future
 added metric is a deliberate `FEATURE_ENGINE_VERSION` decision, never a
 silent reweight of historical confidence scores.
+Step 8 (negative/fraud-like signals) is also done: `bank_gst_gap` now
+compares ALIGNED windows — `engine.py`'s new
+`_aligned_bank_credit_turnover()` restricts the bank-side turnover to
+exactly the calendar months GST has filed data for, closing a real bug
+(comparing a full 12-month bank total against however many months of GST
+happen to exist), verified a no-op on the current committed cohort (GST is
+always filed for the same months bank data covers there) so no existing
+signature broke. New `features/signals.py` module,
+`find_circular_transaction_rings()`, plus new
+`contracts/features.py` shapes `RingLeg`/`CircularTransactionFinding`
+wired onto `FeatureSnapshot.circular_transaction_findings` — structured
+evidence (which transactions, which counterparties, what magnitude), never
+a bare bool, and deliberately excludes raw `description` text (the P5
+prompt-injection surface) since a persisted finding shouldn't carry
+unsanitized narration forward. A REAL bug found and fixed live: the first
+version of the detector (short window + near-equal amounts + mixed
+CREDIT/DEBIT type) false-tripped ~20-40 times across the 200-borrower
+committed cohort, because `cohort/generator.py`'s own even-split
+diversification across a small RECURRING counterparty pool
+(`CUSTOMER-0..4`/`SUPPLIER-0..4`) routinely produces near-identical
+amounts in short windows with mixed direction — indistinguishable from a
+genuine ring by amount/type/window alone. Fixed by adding an ISOLATION
+requirement (every counterparty in a candidate ring must appear NOWHERE
+else in the borrower's windowed history) — the actual discriminator, since
+`RING-1`/`RING-2`/`RING-3` (`generator.py`'s `_build_ring`) are seen
+exactly once, ever, unlike a borrower's ordinary trading relationships;
+took false positives to zero while still detecting 5/5 real
+circular_transactions cohort borrowers
+(`test_circular_transactions_archetype_trips_the_ring_detector_every_
+other_does_not`, run over the real committed cohort through the real
+engine), plus 8 hand-built unit tests in `tests/test_signals.py`. Named
+detection constants (`RING_WINDOW_DAYS=6`, `RING_MIN_LEGS=3`,
+`RING_MAX_COUNTERPARTIES=4`, `RING_AMOUNT_TOLERANCE_FRACTION=0.02`) and the
+isolation rationale are both pinned in `signals.py`'s module docstring and
+`final architecture.txt` §14.2.
 Load-bearing constraint carried forward from
 Phase 1: the feature engine computes numbers, it never decides anything
 with them — a threshold comparison or routing decision anywhere in
@@ -465,12 +500,18 @@ backend/
     features/
       metrics.py             IMPLEMENTED (Phase 2 Step 1) — the 7 pure
                             §14.2 metric functions + FEATURE_ENGINE_VERSION
-      engine.py                IMPLEMENTED (Phase 2 Steps 6-7) —
+      engine.py                IMPLEMENTED (Phase 2 Steps 6-8) —
                             compute_features(canonical_data, as_of, clock)
                             -> FeatureSnapshot; windows + aggregates +
                             calls metrics.py, no formulas of its own;
                             _compute_confidence() (Step 7) finalizes
-                            data_quality.confidence
+                            data_quality.confidence;
+                            _aligned_bank_credit_turnover() (Step 8) fixes
+                            bank_gst_gap window alignment
+      signals.py                IMPLEMENTED (Phase 2 Step 8) —
+                            find_circular_transaction_rings(); structured
+                            CircularTransactionFinding evidence, never a
+                            bare bool
     cohort/
       archetypes.py           IMPLEMENTED (Phase 2 Step 3) — 9 D2
                             archetype specs (ArchetypeSpec/GenerationParams/
