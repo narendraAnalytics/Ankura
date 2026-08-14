@@ -1,0 +1,222 @@
+{
+  "application_id": "3bf2cf2a-ecd0-5df3-82f1-1aca6ba40296",
+  "borrower_pan": "ZEOFN4306N",
+  "bank_accounts": [
+    {
+      "account_id": "acc-synthetic-0111",
+      "bank_name": "Synthetic Cohort Bank",
+      "statement_period_start": "2026-07-01",
+      "statement_period_end": "2026-08-13",
+      "opening_balance_paise": 50000000,
+      "closing_balance_paise": 51968262,
+      "transactions": [
+        {
+          "transaction_date": "2026-07-29",
+          "transaction_type": "CREDIT",
+          "description": "CASH DEPOSIT - BRANCH",
+          "amount_paise": 13231463,
+          "balance_after_paise": null,
+          "bounced": false,
+          "counterparty_id": null,
+          "is_cash": true,
+          "is_debt_service": false
+        },
+        {
+          "transaction_date": "2026-07-20",
+          "transaction_type": "CREDIT",
+          "description": "UPI CR TOPCUST ORDER PAYMENT",
+          "amount_paise": 57090226,
+          "balance_after_paise": null,
+          "bounced": false,
+          "counterparty_id": "CUSTOMER-TOP",
+          "is_cash": false,
+          "is_debt_service": false
+        },
+        {
+          "transaction_date": "2026-07-07",
+          "transaction_type": "DEBIT",
+          "description": "ACH DR EMI-EXISTING LOAN LENDER-EXISTING",
+          "amount_paise": 9207945,
+          "balance_after_paise": null,
+          "bounced": false,
+          "counterparty_id": "LENDER-EXISTING",
+          "is_cash": false,
+          "is_debt_service": true
+        },
+        {
+          "transaction_date": "2026-07-26",
+          "transaction_type": "DEBIT",
+          "description": "UPI DR SUPPLIER-TOP VENDOR PAYMENT",
+          "amount_paise": 37097508,
+          "balance_after_paise": null,
+          "bounced": false,
+          "counterparty_id": "SUPPLIER-TOP",
+          "is_cash": false,
+          "is_debt_service": false
+        },
+        {
+          "transaction_date": "2026-07-03",
+          "transaction_type": "DEBIT",
+          "description": "RTGS DR SUPPLIER-0 RAW MATERIAL",
+          "amount_paise": 5122793,
+          "balance_after_paise": null,
+          "bounced": false,
+          "counterparty_id": "SUPPLIER-0",
+          "is_cash": false,
+          "is_debt_service": false
+        },
+        {
+          "transaction_date": "2026-07-04",
+          "transaction_type": "DEBIT",
+          "description": "RTGS DR SUPPLIER-1 RAW MATERIAL",
+          "amount_paise": 5122793,
+          "balance_after_paise": null,
+          "bounced": false,
+          "counterparty_id": "SUPPLIER-1",
+          "is_cash": false,
+          "is_debt_service": false
+        },
+        {
+          "transaction_date": "2026-07-23",
+          "transaction_type": "DEBIT",
+          "description": "NEFT DR-SUPPLIER-2 PURCHASE ORDER",
+          "amount_paise": 5122793,
+          "balance_after_paise": null,
+          "bounced": false,
+          "counterparty_id": "SUPPLIER-2",
+          "is_cash": false,
+          "is_debt_service": false
+        },
+        {
+          "transaction_date": "2026-07-25",
+          "transaction_type": "DEBIT",
+          "description": "UPI DR SUPPLIER-3 VENDOR PAYMENT",
+          "amount_paise": 5122792,
+          "balance_after_paise": null,
+          "bounced": false,
+          "counterparty_id": "SUPPLIER-3",
+          "is_cash": false,
+          "is_debt_service": false
+        },
+        {
+          "transaction_date": "2026-07-29",
+          "transaction_type": "DEBIT",
+          "description": "UPI DR SUPPLIER-4 VENDOR PAYMENT",
+          "amount_paise": 5122792,
+          "balance_after_paise": null,
+          "bounced": false,
+          "counterparty_id": "SUPPLIER-4",
+          "is_cash": false,
+          "is_debt_service": false
+        },
+        {
+          "transaction_date": "2026-08-14",
+          "transaction_type": "CREDIT",
+          "description": "CASH DEPOSIT - BRANCH",
+          "amount_paise": 14203049,
+          "balance_after_paise": null,
+          "bounced": false,
+          "counterparty_id": null,
+          "is_cash": true,
+          "is_debt_service": false
+        },
+        {
+          "transaction_date": "2026-08-24",
+          "transaction_type": "CREDIT",
+          "description": "UPI CR TOPCUST ORDER PAYMENT",
+          "amount_paise": 61282356,
+          "balance_after_paise": null,
+          "bounced": false,
+          "counterparty_id": "CUSTOMER-TOP",
+          "is_cash": false,
+          "is_debt_service": false
+        },
+        {
+          "transaction_date": "2026-08-20",
+          "transaction_type": "DEBIT",
+          "description": "ACH DR EMI-EXISTING LOAN LENDER-EXISTING",
+          "amount_paise": 9207945,
+          "balance_after_paise": null,
+          "bounced": false,
+          "counterparty_id": "LENDER-EXISTING",
+          "is_cash": false,
+          "is_debt_service": true
+        },
+        {
+          "transaction_date": "2026-08-28",
+          "transaction_type": "DEBIT",
+          "description": "NEFT DR-SUPPLIER-TOP PURCHASE ORDER",
+          "amount_paise": 37097508,
+          "balance_after_paise": null,
+          "bounced": false,
+          "counterparty_id": "SUPPLIER-TOP",
+          "is_cash": false,
+          "is_debt_service": false
+        },
+        {
+          "transaction_date": "2026-08-02",
+          "transaction_type": "DEBIT",
+          "description": "RTGS DR SUPPLIER-1 RAW MATERIAL",
+          "amount_paise": 5122793,
+          "balance_after_paise": null,
+          "bounced": false,
+          "counterparty_id": "SUPPLIER-1",
+          "is_cash": false,
+          "is_debt_service": false
+        },
+        {
+          "transaction_date": "2026-08-11",
+          "transaction_type": "DEBIT",
+          "description": "RTGS DR SUPPLIER-2 RAW MATERIAL",
+          "amount_paise": 5122793,
+          "balance_after_paise": null,
+          "bounced": false,
+          "counterparty_id": "SUPPLIER-2",
+          "is_cash": false,
+          "is_debt_service": false
+        },
+        {
+          "transaction_date": "2026-08-11",
+          "transaction_type": "DEBIT",
+          "description": "RTGS DR SUPPLIER-3 RAW MATERIAL",
+          "amount_paise": 5122793,
+          "balance_after_paise": null,
+          "bounced": false,
+          "counterparty_id": "SUPPLIER-3",
+          "is_cash": false,
+          "is_debt_service": false
+        },
+        {
+          "transaction_date": "2026-08-27",
+          "transaction_type": "DEBIT",
+          "description": "NEFT DR-SUPPLIER-4 PURCHASE ORDER",
+          "amount_paise": 5122792,
+          "balance_after_paise": null,
+          "bounced": false,
+          "counterparty_id": "SUPPLIER-4",
+          "is_cash": false,
+          "is_debt_service": false
+        },
+        {
+          "transaction_date": "2026-08-28",
+          "transaction_type": "DEBIT",
+          "description": "NEFT DR-SUPPLIER-0 PURCHASE ORDER",
+          "amount_paise": 5122792,
+          "balance_after_paise": null,
+          "bounced": false,
+          "counterparty_id": "SUPPLIER-0",
+          "is_cash": false,
+          "is_debt_service": false
+        }
+      ]
+    }
+  ],
+  "gst_returns": [],
+  "bureau": null,
+  "data_quality": {
+    "coverage_months": 2,
+    "source_count": 1,
+    "confidence": 0.0602
+  },
+  "as_of": "2026-08-13T00:00:00Z"
+}

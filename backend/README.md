@@ -181,6 +181,24 @@ convention to check constraints even when already explicitly named, which
 would double-prefix names that are already final (`ck_tenants_status` →
 `ck_tenants_ck_tenants_status`).
 
+## Synthetic cohort (Phase 2)
+
+`src/ankura/cohort/data/` holds 200 synthetic MSME borrower profiles —
+the proof asset used to demo and regression-test the feature engine before
+real provider data exists (Phase 7). It's deterministic and fully
+regenerable:
+
+```bash
+uv run python -m ankura.cohort.generate
+```
+
+`git status` must be clean immediately after — a diff means the generator
+and the committed cohort have drifted, which `tests/test_cohort_data.py`
+also checks automatically. See
+[`src/ankura/cohort/data/README.md`](src/ankura/cohort/data/README.md) for
+what each archetype represents (written for a credit head, not a
+developer).
+
 ## Project layout
 
 ```text
@@ -192,6 +210,12 @@ src/ankura/
     engine.py         Async engine, session factory, RLS tenant-context hook
     models/             SQLAlchemy models (tenants, borrowers, applications, …)
   contracts/           Pydantic canonical request/response/domain models
+  features/                Pure §14.2 metric formulas (Phase 2)
+  cohort/
+    archetypes.py             Declarative synthetic-borrower archetype specs
+    generator.py                 Deterministic, seeded borrower generator
+    generate.py                    CLI: python -m ankura.cohort.generate
+    data/                             The committed 200-borrower cohort
   api/v1/                Versioned FastAPI routers
   services/               Business logic
   validators/              PAN / GSTIN / Udyam format + checksum validation

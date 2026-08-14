@@ -294,7 +294,29 @@ signature exists. The circular-transactions archetype's ring uses a
 deliberately adversarial-looking narration string (the P5 prompt-injection
 test vector Step 4 promises exists in real test data, per §7.3 E6) — P2
 does not defend against it, only makes sure the vector is there for P5 to
-test against later. Load-bearing constraint carried forward from
+test against later. Step 5 (generate + commit the cohort, proof asset A1)
+is also done: `cohort/generate.py`'s `build_cohort_files()` is pure (no
+disk I/O) and returns `{filename: text}` for all 200 borrowers plus
+`manifest.json`; `write_cohort_files()` and
+`tests/test_cohort_data.py`'s drift test both call it, so the committed
+files and the drift check can never disagree with each other by
+construction — only with the generator, which is exactly what the drift
+test is for. Committed to `cohort/data/` as one `NNNN_ARCHETYPE.json` file
+per borrower (archetype in the filename, so a human can identify a file
+without opening it) rather than one big file — deliberate, not a
+workaround: max observed file size is ~52KB, nowhere near forcing a raise
+of the `check-added-large-files` 1000KB cap, and per-borrower files are
+more diffable anyway. `manifest.json` carries `master_seed`,
+`generator_version`, `as_of`, `cohort_size`, `archetype_mix`,
+`archetype_assignment` (200 entries, index order), and a
+`checksum_sha256` over all 200 borrowers' compact JSON — a single field a
+reviewer can diff to know instantly whether ANY borrower changed, without
+diffing 200 files by hand. Regenerate via
+`uv run python -m ankura.cohort.generate`, documented in `backend/README.md`
+and in `cohort/data/README.md` (written for a credit head — the cohort is
+a sales artefact per §9.5 A1, not test scaffolding). PROVE IT verified
+live: running the CLI again immediately after committing produced a clean
+`git status`. Load-bearing constraint carried forward from
 Phase 1: the feature engine computes numbers, it never decides anything
 with them — a threshold comparison or routing decision anywhere in
 `features/` means Phase 3 scope has leaked backward. `final
@@ -388,6 +410,11 @@ backend/
                             seeded CanonicalFinancialData generator;
                             solves aggregates from features.metrics
                             formulas, never hand-typed
+      generate.py               IMPLEMENTED (Phase 2 Step 5) — CLI +
+                            build_cohort_files(), python -m ankura.cohort.generate
+      data/                       IMPLEMENTED (Phase 2 Step 5) — 200
+                            committed borrower JSON files + manifest.json +
+                            README.md (proof asset A1)
     api/
       deps.py               IMPLEMENTED (Step 8) — get_current_tenant():
                            Bearer key -> peppered hash lookup ->
