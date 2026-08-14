@@ -207,20 +207,53 @@ word — `grep -ri "foir" src/` must return nothing and is a hard PROVE IT
 gate, not just a naming preference. `test_metrics.py` hand-computes one
 worked example plus every zero-denominator case per metric (18 tests, all
 independently verified on paper first). Step 2 (growing
-`CanonicalFinancialData`/defining `FeatureSnapshot`) has started:
+`CanonicalFinancialData`/defining `FeatureSnapshot`) is done:
 `BankTransaction` (`contracts/financial.py`) grew `counterparty_id` (set by
 the provider layer, never parsed from `description` at feature time —
 that's exactly the coupling the §5.2 provider abstraction exists to
 prevent), `is_cash`, and `is_debt_service`, the inputs the
-concentration/cash-deposit/obligation formulas need. Load-bearing
-constraint carried forward from Phase 1: the feature engine computes
-numbers, it never decides anything with them — a threshold comparison or
-routing decision anywhere in `features/` means Phase 3 scope has leaked
-backward. `final architecture.txt` §14.2 is where every metric formula
-must be pinned exactly once (now amended with `supplier_concentration` and
-the rounding/undefined-value rules), and §16 is where Phase 1's five
-hard-won concurrency/transaction patterns (self-contained audit-style
-writes, claim-before-work idempotency, advisory locks over
+concentration/cash-deposit/obligation formulas need; `contracts/features.py`
+defines `FeatureSnapshot` (every §14.2 metric as `float | None`, `as_of`
+vs. `computed_at` kept distinct per P1 Step 10, `feature_engine_version`,
+`input_hash`, and a `ProvenanceEntry` list), reusing
+`contracts.financial.DataQuality` rather than duplicating it. Step 3
+(archetype specs) is also done: `cohort/archetypes.py` declares all nine
+D2 archetypes as frozen dataclasses (`ArchetypeSpec` = economic story +
+`GenerationParams` the Step 4 generator will solve toward +
+`expected_features: dict[str, FeatureExpectation]`), where
+`FeatureExpectation` is a range/direction check (`min`/`max`/
+`allow_undefined`/`must_be_undefined`) — deliberately never an exact
+value, since an exact value would just re-encode the generator's own
+arithmetic (the one documented exception is `new_to_credit`'s
+`obligation_ratio`, pinned to exactly `[0.0, 0.0]`, because a real
+measured zero IS the claim under test there, not an undefined metric).
+`FRAUD_ARCHETYPES` (`gst_bank_mismatch`, `circular_transactions`) both
+require a materially elevated, DEFINED `bank_gst_gap` (>= 0.25-0.40);
+every other archetype's `bank_gst_gap` ceiling stays <= 0.15 or is
+explicitly `must_be_undefined` (`thin_file`, which hasn't filed GST yet) —
+that gap between the two groups is what makes Step 8's false-positive-
+honesty check meaningful rather than cosmetic. `test_archetypes.py` (20
+tests) checks the module's own internal consistency (mix sums to 200,
+every archetype declares every metric, the fraud/non-fraud
+`bank_gst_gap` split holds, `declining_business` actually encodes the D4
+worked example, malformed `Range`/`FeatureExpectation` construction is
+rejected) — there's no generator yet to run an end-to-end regression
+against; that's Step 11. One ambiguity flagged rather than silently
+resolved: Step 3's own text bundles `thin_file`/`new_to_credit` under one
+"genuinely short coverage" bullet, but D2 names them as separate
+archetypes with separate stories, so `new_to_credit` keeps a
+shorter-than-healthy-but-not-thin_file-short coverage band and exercises
+a *different* Step 1 discipline (measured zero, not undefined) — see the
+ASSUMPTION FLAGGED note in `archetypes.py`'s `new_to_credit` docstring
+and in `phase2.txt` Step 3. Load-bearing constraint carried forward from
+Phase 1: the feature engine computes numbers, it never decides anything
+with them — a threshold comparison or routing decision anywhere in
+`features/` means Phase 3 scope has leaked backward. `final
+architecture.txt` §14.2 is where every metric formula must be pinned
+exactly once (now amended with `supplier_concentration` and the
+rounding/undefined-value rules), and §16 is where Phase 1's five hard-won
+concurrency/transaction patterns (self-contained audit-style writes,
+claim-before-work idempotency, advisory locks over
 `SELECT ... FOR UPDATE`, hash-pointer chain ordering) are recorded for
 reuse — `feature_snapshots` (Phase 2 Step 9) is planned as an immutable,
 no-UPDATE-grant table exactly like `audit_events`, so those same patterns
@@ -292,10 +325,16 @@ backend/
                            financial (write these BEFORE tables —
                            final architecture.txt §14.1). financial.py
                            grew counterparty_id/is_cash/is_debt_service on
-                           BankTransaction in Phase 2 Step 2 (in progress)
+                           BankTransaction (Phase 2 Step 2); features.py
+                           (FeatureSnapshot, ProvenanceEntry) added
+                           (Phase 2 Step 2)
     features/
       metrics.py             IMPLEMENTED (Phase 2 Step 1) — the 7 pure
                             §14.2 metric functions + FEATURE_ENGINE_VERSION
+    cohort/
+      archetypes.py           IMPLEMENTED (Phase 2 Step 3) — 9 D2
+                            archetype specs (ArchetypeSpec/GenerationParams/
+                            FeatureExpectation), no generator yet (Step 4)
     api/
       deps.py               IMPLEMENTED (Step 8) — get_current_tenant():
                            Bearer key -> peppered hash lookup ->
