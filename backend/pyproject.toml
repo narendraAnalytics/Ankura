@@ -34,7 +34,7 @@ dev = [
     "pytest-asyncio>=1.4.0",
     "pytest-cov>=7.0.0",
     "pytest-env>=1.1.5",
-    "ruff>=0.16.2",
+    "ruff>=0.16.3",
     "types-python-dateutil>=2.9.0",
 ]
 
